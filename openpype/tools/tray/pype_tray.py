@@ -453,7 +453,10 @@ class TrayManager:
             # Add staging flag if was running from staging
             if is_running_staging():
                 args.append("--use-staging")
-            kwargs["env"].pop("OPENPYPE_VERSION", None)
+            # Change openpype version to the one which should be used
+            # - the latest version in version repository can be lower version
+            #   then latest version on the workstation
+            kwargs["env"]["OPENPYPE_VERSION"] = str(get_expected_version())
 
         args.extend(additional_args)
         if platform.system().lower() == "windows":
