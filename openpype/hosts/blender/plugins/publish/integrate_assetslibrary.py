@@ -18,6 +18,9 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
 
     order = pyblish.api.IntegratorOrder + 0.3
     label = "Add to assets library"
+    hosts = ["blender"]
+    families = ["model"]
+    optional = True
 
     def process(self, instance):
         """Connect dependency links for all instances, globally
@@ -42,7 +45,9 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
 
         """
 
-        project_settings = get_project_settings(legacy_io.Session["AVALON_PROJECT"])
+        project_settings = get_project_settings(
+            legacy_io.Session["AVALON_PROJECT"]
+        )
         blender_settings = project_settings.get("blender", {})
 
         if blender_settings.get("assets-library", {}).get("enabled"):
@@ -57,7 +62,9 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
                 libpath = f"/media/felix/T01/Projets/Normaal/pipeline/openpype_projects/Suzanna/AssetBrowser/{filename}"
                 for obj in instance:
                     if isinstance(obj, Collection):
-                        group_name = plugin.asset_name(asset, subset, unique_number)
+                        group_name = plugin.asset_name(
+                            asset, subset, unique_number
+                        )
                         print("toudou", pprint(instance.data))
                         metadata_update(
                             obj,
@@ -65,20 +72,25 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
                                 "schema": "openpype:container-2.0",
                                 "id": AVALON_CONTAINER_ID,
                                 "name": instance.name,
-                                "namespace": instance.data["namespace"],
-                                "loader": str(self.__class__.__name__),
+                                "namespace": instance.data.get(
+                                    "namespace", ""
+                                ),
+                                "loader": "BlendModelLoader",  # Needed to allow update
                                 "representation": str(
                                     [
                                         k
                                         for k, v in instance.data[
                                             "published_representations"
                                         ].items()
-                                        if v["representation"]["name"] == "blend"
+                                        if v["representation"]["name"]
+                                        == "blend"
                                     ][0]
                                 ),
                                 "libpath": libpath,
                                 "asset_name": instance.name,
-                                "parent": str(instance.data["assetEntity"]["parent"]),
+                                "parent": str(
+                                    instance.data["assetEntity"]["parent"]
+                                ),
                                 "family": instance.data["family"],
                                 "objectName": group_name,
                             },
