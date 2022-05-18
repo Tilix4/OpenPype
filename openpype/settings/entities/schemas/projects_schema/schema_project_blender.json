@@ -66,6 +66,17 @@
             ]
         },
         {
+            "type": "dict",
+            "collapsible": true,
+            "checkbox_key": "enabled",
+            "key": "assets-library",
+            "label": "Assets Library",
+            "children": [
+                {"type": "boolean", "key": "enabled", "label": "Enabled"},
+                {"type": "text", "key": "folder", "label": "Folder"},
+            ]
+        },
+        {
             "type": "schema_template",
             "name": "template_workfile_options",
             "skip_paths": [
