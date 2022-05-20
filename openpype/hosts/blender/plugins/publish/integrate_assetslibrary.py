@@ -1,7 +1,5 @@
-from collections import OrderedDict
 from pprint import pprint
 
-from bson.objectid import ObjectId
 import pyblish.api
 from openpype.hosts.blender.api import plugin
 from openpype.hosts.blender.api.pipeline import metadata_update
