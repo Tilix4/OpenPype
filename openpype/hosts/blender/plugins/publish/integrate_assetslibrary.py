@@ -55,44 +55,12 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         # Mark as asset
         marked_as_assets = []
 
-        asset = instance.data["name"]
-        subset = instance.data["subset"]
-        unique_number = plugin.get_unique_number(asset, subset)
-
         # TODO from settings
         filename = f"{instance.name}.blend"
         libpath = f"/media/felix/T01/Projets/Normaal/pipeline/openpype_projects/Suzanna/AssetBrowser/{filename}"
 
         for obj in instance:
             if isinstance(obj, Collection):
-                group_name = plugin.asset_name(asset, subset, unique_number)
-
-                # Set metadata to be considered as container
-                metadata_update(
-                    obj,
-                    {
-                        "schema": "openpype:container-2.0",
-                        "id": AVALON_CONTAINER_ID,
-                        "name": instance.name,
-                        "namespace": instance.data.get("namespace", ""),
-                        "loader": "BlendModelLoader",  # Needed to allow update
-                        "representation": str(
-                            [
-                                k
-                                for k, v in instance.data[
-                                    "published_representations"
-                                ].items()
-                                if v["representation"]["name"] == "blend"
-                            ][0]
-                        ),
-                        "libpath": libpath,
-                        "asset_name": instance.name,
-                        "parent": str(instance.data["assetEntity"]["parent"]),
-                        "family": instance.data["family"],
-                        "objectName": group_name,
-                    },
-                )
-
                 # Mark as asset for Blender to recognize it
                 obj.asset_mark()
                 marked_as_assets.append(obj)
