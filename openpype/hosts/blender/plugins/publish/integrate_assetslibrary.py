@@ -1,8 +1,9 @@
 from pathlib import Path
+from typing import List, Union
 
 import pyblish.api
 import bpy
-from bpy.types import Collection
+from bpy.types import Collection, Object
 
 from openpype.lib import Anatomy
 from openpype.pipeline import legacy_io
@@ -31,27 +32,14 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
     optional = True
     active = _use_assets_library()
 
-    def process(self, instance):
-        """Connect dependency links for all instances, globally
-        TODO
-        Code steps:
-        * filter out instances that has "versionEntity" entry in data
-        * find workfile instance within context
-        * if workfile found:
-            - link all `loadedVersions` as input of the workfile
-            - link workfile as input of all publishing instances
-        * else:
-            - show "no workfile" warning
-        * link instances' inputs if it's data has "inputVersions" entry
-        * Write into database
+    def process(self, instance: List[Union[Collection, Object]]):
+        """Make collection available to be used from asset browser.
+        
+        Copy extracted blend file into folder dedicated for blender assets library.
+        The collection is marked as `asset`.
 
-        inputVersions:
-            The "inputVersions" in instance.data should be a list of
-            version document's Id (str or ObjectId), which are the
-            dependencies of the publishing instance that should be
-            extracted from working scene by the DCC specific publish
-            plugin.
-
+        Args:
+            instance (List[Union[Collection, Object]]): List of integrated collections/objects 
         """
         published_representations = instance.data.get("published_representations")
         project_name = legacy_io.Session["AVALON_PROJECT"]
