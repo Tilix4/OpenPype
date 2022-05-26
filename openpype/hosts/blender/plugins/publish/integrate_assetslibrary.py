@@ -1,13 +1,8 @@
-from pprint import pprint
-
 import pyblish.api
-from openpype.hosts.blender.api import plugin
-from openpype.hosts.blender.api.pipeline import metadata_update
 import bpy
 from bpy.types import Collection
 
 from openpype.pipeline import legacy_io
-from openpype.pipeline.constants import AVALON_CONTAINER_ID
 from openpype.settings.lib import get_project_settings
 
 
