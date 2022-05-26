@@ -61,13 +61,17 @@
         "transient": {
             "folder": "{root[work]}/{project[name]}/{hierarchy}/{asset}/work/{family}/{subset}"
         },
+        "blender-assets-library": {
+            "folder": "{root[work]}/{project[name]}/AssetsLibrary"
+        },
         "__dynamic_keys_labels__": {
             "maya2unreal": "Maya to Unreal",
             "simpleUnrealTextureHero": "Simple Unreal Texture - Hero",
             "simpleUnrealTexture": "Simple Unreal Texture",
             "online": "online",
             "source": "source",
-            "transient": "transient"
+            "transient": "transient",
+            "blender-assets-library": "Blender Assets Library for Asset Browser"
         }
     }
 }

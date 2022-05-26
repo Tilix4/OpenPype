@@ -66,15 +66,9 @@
             ]
         },
         {
-            "type": "dict",
-            "collapsible": true,
-            "checkbox_key": "enabled",
-            "key": "assets-library",
-            "label": "Assets Library",
-            "children": [
-                {"type": "boolean", "key": "enabled", "label": "Enabled"},
-                {"type": "text", "key": "folder", "label": "Folder"}
-            ]
+            "type": "boolean",
+            "key": "blender-assets-library-enabled",
+            "label": "Use Blender Assets Library"
         },
         {
             "type": "schema_template",
