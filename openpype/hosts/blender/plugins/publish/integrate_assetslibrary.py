@@ -43,14 +43,9 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         """
         published_representations = instance.data.get("published_representations")
         project_name = legacy_io.Session["AVALON_PROJECT"]
-        project_settings = get_project_settings(project_name)
-        blender_settings = project_settings.get("blender", {})
 
         # Stop if disabled or Instance is without representations
-        if (
-            not blender_settings.get("blender-assets-library-enabled")
-            or not published_representations
-        ):
+        if published_representations:
             return
 
         # Anatomy is primarily used for roots resolving
