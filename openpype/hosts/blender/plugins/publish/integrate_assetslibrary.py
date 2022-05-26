@@ -34,12 +34,12 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
 
     def process(self, instance: List[Union[Collection, Object]]):
         """Make collection available to be used from asset browser.
-        
+
         Copy extracted blend file into folder dedicated for blender assets library.
         The collection is marked as `asset`.
 
         Args:
-            instance (List[Union[Collection, Object]]): List of integrated collections/objects 
+            instance (List[Union[Collection, Object]]): List of integrated collections/objects
         """
         published_representations = instance.data.get("published_representations")
         project_name = legacy_io.Session["AVALON_PROJECT"]
