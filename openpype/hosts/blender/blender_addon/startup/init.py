@@ -106,4 +106,4 @@ def unregister():
         project_name
     )
     if lib_index >= 0:
-        bpy.ops.preferences.asset_library_remove(lib_index)
+        bpy.ops.preferences.asset_library_remove(index=lib_index)
