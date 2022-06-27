@@ -1,21 +1,8 @@
 """Load an asset in Blender from an Alembic file."""
 
-from pathlib import Path
-from pprint import pformat
-from typing import Dict, List, Optional
-
 import bpy
 
-from openpype.pipeline import (
-    get_representation_path,
-    AVALON_CONTAINER_ID,
-)
-
-from openpype.hosts.blender.api.pipeline import (
-    AVALON_CONTAINERS,
-    AVALON_PROPERTY,
-)
-from openpype.hosts.blender.api import plugin, lib
+from openpype.hosts.blender.api import plugin
 
 
 class CacheModelLoader(plugin.AssetLoader):
@@ -33,27 +20,11 @@ class CacheModelLoader(plugin.AssetLoader):
     label = "Load Alembic"
     icon = "code-fork"
     color = "orange"
+    color_tag = "COLOR_04"
 
-    def _remove(self, asset_group):
-        objects = list(asset_group.children)
-        empties = []
+    def _process(self, libpath, asset_group):
 
-        for obj in objects:
-            if obj.type == 'MESH':
-                for material_slot in list(obj.material_slots):
-                    bpy.data.materials.remove(material_slot.material)
-                bpy.data.meshes.remove(obj.data)
-            elif obj.type == 'EMPTY':
-                objects.extend(obj.children)
-                empties.append(obj)
-
-        for empty in empties:
-            bpy.data.objects.remove(empty)
-
-    def _process(self, libpath, asset_group, group_name):
-        plugin.deselect_all()
-
-        collection = bpy.context.view_layer.active_layer_collection.collection
+        current_objects = set(bpy.data.objects)
 
         relative = bpy.context.preferences.filepaths.use_relative_paths
         bpy.ops.wm.alembic_import(
@@ -61,40 +32,15 @@ class CacheModelLoader(plugin.AssetLoader):
             relative_path=relative
         )
 
-        parent = bpy.context.scene.collection
-
-        imported = lib.get_selection()
-
-        # Children must be linked before parents,
-        # otherwise the hierarchy will break
-        objects = []
-
-        for obj in imported:
-            obj.parent = asset_group
-
-        for obj in imported:
-            objects.append(obj)
-            imported.extend(list(obj.children))
-
-        objects.reverse()
+        objects = set(bpy.data.objects) - current_objects
 
         for obj in objects:
-            name = obj.name
-            obj.name = f"{group_name}:{name}"
-            if obj.type != 'EMPTY':
-                name_data = obj.data.name
-                obj.data.name = f"{group_name}:{name_data}"
+            for collection in obj.users_collection:
+                collection.objects.unlink(obj)
 
-                for material_slot in obj.material_slots:
-                    name_mat = material_slot.material.name
-                    material_slot.material.name = f"{group_name}:{name_mat}"
+        plugin.link_to_collection(objects, asset_group)
 
-            if not obj.get(AVALON_PROPERTY):
-                obj[AVALON_PROPERTY] = dict()
-
-            avalon_info = obj[AVALON_PROPERTY]
-            avalon_info.update({"container_name": group_name})
-
+        plugin.orphans_purge()
         plugin.deselect_all()
 
         return objects
