@@ -15,7 +15,13 @@
                 {
                     "key": "ValidateAssetsVersion",
                     "label": "Validate Assets Version"
-                },
+                }
+            ]
+        },
+        {
+            "type": "schema_template",
+            "name": "template_publish_plugin",
+            "template_data": [
                 {
                     "key": "ValidateCameraZeroKeyframe",
                     "label": "Validate Camera Zero Keyframe"
