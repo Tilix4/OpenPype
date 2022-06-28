@@ -4,7 +4,6 @@ import bpy
 
 from openpype.pipeline import publish
 from openpype.hosts.blender.api import plugin
-from openpype.hosts.blender.api.pipeline import AVALON_PROPERTY
 
 
 class ExtractABC(publish.Extractor):
@@ -27,17 +26,15 @@ class ExtractABC(publish.Extractor):
         plugin.deselect_all()
 
         selected = []
-        active = None
 
         for obj in instance:
-            obj.select_set(True)
-            selected.append(obj)
-            # Set as active the asset group
-            if obj.get(AVALON_PROPERTY):
-                active = obj
+            if isinstance(obj, bpy.types.Object):
+                obj.select_set(True)
+                selected.append(obj)
 
         context = plugin.create_blender_context(
-            active=active, selected=selected)
+            active=selected[-1], selected=selected
+        )
 
         with bpy.context.temp_override(**context):
             # We export the abc
@@ -60,5 +57,6 @@ class ExtractABC(publish.Extractor):
         }
         instance.data["representations"].append(representation)
 
-        self.log.info("Extracted instance '%s' to: %s",
-                      instance.name, representation)
+        self.log.info(
+            f"Extracted instance '{instance.name}' to: {representation}"
+        )
