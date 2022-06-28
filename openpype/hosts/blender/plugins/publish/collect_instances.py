@@ -41,6 +41,13 @@ class CollectInstances(pyblish.api.ContextPlugin):
 
     def process(self, context):
         """Collect instances from the current Blender scene."""
+        # Collect global scene data.
+        context.data.update({
+            "frameStart": bpy.context.scene.frame_start,
+            "frameEnd": bpy.context.scene.frame_end,
+            "fps": bpy.context.scene.render.fps,
+        })
+
         # Create instance from outliner datablocks
         # TODO is it only conformation code and must be removed?
         for c in [
