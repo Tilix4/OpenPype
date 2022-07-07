@@ -16,10 +16,7 @@ from openpype.hosts.blender.api.pipeline import (
 )
 
 
-# NOTE (kaamaurice) This loader whill be refactored in a specific branch:
-# - module will be renamed load_look_json
-# - class will be renamed JsonLookLoader
-# In order to implement lookdev extractor and loader with blend file.
+# TODO (kaamaurice) needs refactor.
 
 
 class BlendLookLoader(plugin.BlendLoader):
