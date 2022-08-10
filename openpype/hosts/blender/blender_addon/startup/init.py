@@ -1,5 +1,6 @@
 import re
 from pathlib import Path
+from pprint import pprint
 
 import bpy
 from bpy.app.handlers import persistent
@@ -77,7 +78,7 @@ def setup_asset_library(*_args):
 
             # Build folder path
             library_folder_path = Path(
-                formatted_anatomy["blender-assets-library"]["folder"]
+                formatted_anatomy["blenderAssetsLibrary"]["folder"]
             )
 
             # Add OP assets library to asset libraries filepaths

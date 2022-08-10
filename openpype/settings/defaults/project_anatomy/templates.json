@@ -61,7 +61,7 @@
         "transient": {
             "folder": "{root[work]}/{project[name]}/{hierarchy}/{asset}/work/{family}/{subset}"
         },
-        "blender-assets-library": {
+        "blenderAssetsLibrary": {
             "folder": "{root[work]}/{project[name]}/AssetsLibrary"
         },
         "__dynamic_keys_labels__": {
@@ -71,7 +71,7 @@
             "online": "online",
             "source": "source",
             "transient": "transient",
-            "blender-assets-library": "Blender Assets Library for Asset Browser"
+            "blenderAssetsLibrary": "Blender Assets Library for Asset Browser"
         }
     }
 }

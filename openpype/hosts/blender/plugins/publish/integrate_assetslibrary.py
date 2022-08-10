@@ -1,4 +1,5 @@
 from pathlib import Path
+from pprint import pprint
 from typing import List, Union
 
 import pyblish.api
@@ -9,7 +10,7 @@ from openpype.lib import Anatomy
 from openpype.pipeline import legacy_io
 from openpype.settings.lib import get_project_settings
 
-
+print("lala")
 def _use_assets_library() -> bool:
     """Check if use of assets library is enabled.
 
@@ -32,7 +33,7 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
     optional = True
     active = _use_assets_library()
 
-    def process(self, instance: List[Union[Collection, Object]]):
+    def process(self, instance):
         """Make collection available to be used from asset browser.
 
         Copy extracted blend file into folder dedicated for blender assets library.
@@ -45,8 +46,10 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         project_name = legacy_io.Session["AVALON_PROJECT"]
 
         # Stop if disabled or Instance is without representations
-        if published_representations:
+        if not published_representations:
             return
+        # TODO CURRENT
+        pprint(published_representations)
 
         # Anatomy is primarily used for roots resolving
         anatomy = Anatomy(project_name)
@@ -67,7 +70,7 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
             if anatomy_data.get("app") in self.hosts:
                 formatted_anatomy = anatomy.format(anatomy_data)
                 library_folder_path = Path(
-                    formatted_anatomy["blender-assets-library"]["folder"]
+                    formatted_anatomy["blenderAssetsLibrary"]["folder"]
                 )
                 asset_filename = Path(library_folder_path, f"{instance.name}.blend")
                 break
@@ -82,6 +85,7 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         # Save asset library
         if not library_folder_path.is_dir():
             asset_filename.mkdir(parents=True)
+        # TODO make link to published blend
         bpy.ops.wm.save_as_mainfile(filepath=asset_filename.as_posix(), copy=True)
 
         # Unmark assets to avoid having it
