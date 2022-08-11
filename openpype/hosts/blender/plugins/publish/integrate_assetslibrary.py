@@ -1,16 +1,17 @@
 from pathlib import Path
 from pprint import pprint
-from typing import List, Union
 
 import pyblish.api
 import bpy
-from bpy.types import Collection, Object
+from bpy.types import Collection
 
-from openpype.lib import Anatomy
+from openpype.pipeline.anatomy import Anatomy
 from openpype.pipeline import legacy_io
 from openpype.settings.lib import get_project_settings
 
 print("lala")
+
+
 def _use_assets_library() -> bool:
     """Check if use of assets library is enabled.
 
@@ -34,59 +35,62 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
     active = _use_assets_library()
 
     def process(self, instance):
-        """Make collection available to be used from asset browser.
+        """Make collection marked as asset available to be used from asset browser.
 
-        Copy extracted blend file into folder dedicated for blender assets library.
-        The collection is marked as `asset`.
+        Symlink hero blend file into folder dedicated for blender assets library.
 
         Args:
             instance (List[Union[Collection, Object]]): List of integrated collections/objects
         """
-        published_representations = instance.data.get("published_representations")
+        marked_as_assets = [
+            obj
+            for obj in instance
+            if isinstance(obj, Collection) and obj.asset_data
+        ]
+
+        # Check if marked as asset
+        if not marked_as_assets:
+            return
+
+        # Get instance useful data
+        published_representations = instance.data.get(
+            "published_representations"
+        )
         project_name = legacy_io.Session["AVALON_PROJECT"]
 
         # Stop if disabled or Instance is without representations
         if not published_representations:
             return
-        # TODO CURRENT
-        pprint(published_representations)
 
         # Anatomy is primarily used for roots resolving
         anatomy = Anatomy(project_name)
 
         # Extract asset filename from published representations
-        # NOTE this is not a clean way to do it,
-        # but making it simple this will require deep OP refactor
         library_folder_path = ""
-        asset_filename = ""
-        for representation_info in published_representations.values():
-            anatomy_data = representation_info["anatomy_data"]
+        symlink_file = ""
+        for representation_data in published_representations.values():
+            anatomy_data = representation_data["anatomy_data"]
 
             # Representation was not integrated
             if not anatomy_data:
                 continue
 
-            # Get assets library path folder
+            # Get assets library path folder & hero file path
             if anatomy_data.get("app") in self.hosts:
                 formatted_anatomy = anatomy.format(anatomy_data)
                 library_folder_path = Path(
                     formatted_anatomy["blenderAssetsLibrary"]["folder"]
                 )
-                asset_filename = Path(library_folder_path, f"{instance.name}.blend")
+                hero_file = Path(formatted_anatomy["hero"]["path"])
+                symlink_file = Path(
+                    library_folder_path, f"{instance.name}.blend"
+                )
                 break
 
-        # Mark as asset
-        marked_as_assets = []
-        for obj in instance:
-            if isinstance(obj, Collection):
-                obj.asset_mark()
-                marked_as_assets.append(obj)
-
-        # Save asset library
+        # Check assets library directory
         if not library_folder_path.is_dir():
-            asset_filename.mkdir(parents=True)
-        # TODO make link to published blend
-        bpy.ops.wm.save_as_mainfile(filepath=asset_filename.as_posix(), copy=True)
+            library_folder_path.mkdir(parents=True)
 
-        # Unmark assets to avoid having it
-        [b.asset_clear() for b in marked_as_assets]
+        # Create symlink
+        if not symlink_file.is_file():
+            symlink_file.symlink_to(hero_file)

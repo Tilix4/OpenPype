@@ -58,6 +58,11 @@
             "optional": false,
             "active": true
         },
+        "ValidateAssetsVersion": {
+            "enabled": true,
+            "optional": true,
+            "active": true
+        },
         "ValidateMeshHasUvs": {
             "enabled": true,
             "optional": true,
@@ -71,11 +76,6 @@
         "ValidateTransformZero": {
             "enabled": true,
             "optional": false,
-            "active": true
-        },
-        "ValidateAssetsVersion": {
-            "enabled": true,
-            "optional": true,
             "active": true
         },
         "ExtractBlend": {
