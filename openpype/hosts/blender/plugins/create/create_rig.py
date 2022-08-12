@@ -14,4 +14,5 @@ class CreateRig(plugin.Creator):
     label = "Rig"
     family = "rig"
     icon = "wheelchair"
+    defaults = ["Main", "Proxy"]
     color_tag = "COLOR_03"
