@@ -840,6 +840,13 @@ class IntegrateAsset(pyblish.api.InstancePlugin):
         repre_id = None
         if existing:
             repre_id = existing["_id"]
+        else:
+            # Initialize ID, trying to get it from an earlier stage
+            repre_id = repre.get('id')
+
+            # If ID has been created in early stage, cast to ObjectId from str
+            if repre_id:
+                repre_id = ObjectId(repre_id)
 
         # Store first transferred destination as published path data
         # - used primarily for reviews that are integrated to custom modules

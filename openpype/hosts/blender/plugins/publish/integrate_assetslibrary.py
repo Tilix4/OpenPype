@@ -81,7 +81,9 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
                 library_folder_path = Path(
                     formatted_anatomy["blenderAssetsLibrary"]["folder"]
                 )
-                hero_file = Path(formatted_anatomy["hero"]["path"])
+                version_file = Path(
+                    representation_data["representation"]["data"]["path"]
+                )
                 symlink_file = Path(
                     library_folder_path, f"{instance.name}.blend"
                 )
@@ -92,5 +94,6 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
             library_folder_path.mkdir(parents=True)
 
         # Create symlink
-        if not symlink_file.is_file():
-            symlink_file.symlink_to(hero_file)
+        if symlink_file.is_file():  # Delete existing one if any
+            symlink_file.unlink()
+        symlink_file.symlink_to(version_file)

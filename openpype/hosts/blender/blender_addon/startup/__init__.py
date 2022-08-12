@@ -1,6 +1,5 @@
 import re
 from pathlib import Path
-from pprint import pprint
 
 import bpy
 from bpy.app.handlers import persistent
@@ -67,21 +66,24 @@ def setup_asset_library(*_args):
         library = bpy.context.preferences.filepaths.asset_libraries.get(
             project_name
         )
-        if not library:
-            # Prepare anatomy data
-            anatomy = Anatomy(project_name)
-            anatomy_data = {
-                "root": anatomy.roots,
-                "project": {"name": project_name},
-            }
-            formatted_anatomy = anatomy.format(anatomy_data)
 
-            # Build folder path
-            library_folder_path = Path(
-                formatted_anatomy["blenderAssetsLibrary"]["folder"]
-            )
+        # Prepare anatomy data
+        anatomy = Anatomy(project_name)
+        anatomy_data = {
+            "root": anatomy.roots,
+            "project": {"name": project_name},
+        }
+        formatted_anatomy = anatomy.format(anatomy_data)
 
-            # Add OP assets library to asset libraries filepaths
+        # Build folder path
+        library_folder_path = Path(
+            formatted_anatomy["blenderAssetsLibrary"]["folder"]
+        )
+
+        # Add OP assets library to asset libraries filepaths
+        if library:
+            library.path = library_folder_path.as_posix()
+        else:
             bpy.ops.preferences.asset_library_add(
                 directory=library_folder_path.as_posix()
             )

@@ -12,6 +12,11 @@ from openpype.pipeline import (
 from openpype.lib import source_hash
 from openpype.hosts.blender.api import plugin, get_compress_setting
 from openpype.settings.lib import get_project_settings
+from openpype.hosts.blender.api.pipeline import (
+    metadata_update,
+    AVALON_PROPERTY,
+)
+from openpype.hosts.blender.plugins.load.load_model import LinkModelLoader
 
 
 class ExtractBlend(publish.Extractor):
