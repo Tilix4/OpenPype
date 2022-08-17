@@ -1,8 +1,6 @@
 from pathlib import Path
-from pprint import pprint
 
 import pyblish.api
-import bpy
 from bpy.types import Collection
 
 from openpype.pipeline.anatomy import Anatomy
@@ -97,3 +95,47 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         if symlink_file.is_file():  # Delete existing one if any
             symlink_file.unlink()
         symlink_file.symlink_to(version_file)
+
+        # Get required files
+        source_file = Path(
+            instance.data["versionEntity"]["data"]["source"].format_map(
+                {"root": anatomy.roots}
+            )
+        )
+        source_catalog_file = source_file.parent.joinpath(
+            "blender_assets.cats.txt"
+        )
+        library_catalog_file = library_folder_path.joinpath(
+            "blender_assets.cats.txt"
+        )
+
+        # Get exisiting lines from library file
+        if library_catalog_file.is_file():
+            library_lines = library_catalog_file.read_text().splitlines()
+        else:
+            library_lines = []
+
+        with library_catalog_file.open("w") as file:
+            # Get source file text
+            source_catalog_text = source_catalog_file.read_text()
+
+            if library_lines:
+                # Iterate source file lines
+                source_lines = source_catalog_text.splitlines()
+                for line in source_lines:
+
+                    # Skip comments and version line
+                    if line == "" or line.startswith(("#", "Version")):
+                        continue
+                    # Update asset matched on UUID only if catalog ref has been changed
+                    else:
+                        asset_uuid = line.split(":")[0]
+                        for i, l in enumerate(library_lines):
+                            if l.startswith(asset_uuid) and l != line:
+                                library_lines[i] = line
+
+                # Write lines with modifications
+                file.write("\n".join(library_lines) + "\n")
+            else:
+                # Copy source text
+                file.write(source_catalog_text)
