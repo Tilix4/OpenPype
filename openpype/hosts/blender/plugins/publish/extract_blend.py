@@ -16,7 +16,11 @@ from openpype.hosts.blender.api.pipeline import (
     metadata_update,
     AVALON_PROPERTY,
 )
-from openpype.hosts.blender.plugins.load.load_model import LinkModelLoader
+from openpype.hosts.blender.plugins.load.load_model import (
+    AppendModelLoader,
+    LinkModelLoader,
+)
+from openpype.settings.lib import get_project_settings
 
 
 class ExtractBlend(publish.Extractor):

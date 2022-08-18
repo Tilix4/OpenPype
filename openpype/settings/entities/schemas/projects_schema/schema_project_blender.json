@@ -66,9 +66,31 @@
             ]
         },
         {
-            "type": "boolean",
-            "key": "blender-assets-library-enabled",
-            "label": "Use Blender Assets Library"
+            "type": "dict",
+            "key": "assets-library",
+            "label": "Assets Library",
+            "collapsible": true,
+            "checkbox_key": "enabled",
+            "children": [
+                {
+                    "type": "boolean",
+                    "key": "enabled",
+                    "label": "Use Blender Assets Library"
+                },
+                {
+                    "key": "import_type",
+                    "label": "Import Type",
+                    "type": "enum",
+                    "enum_items": [
+                        {
+                            "link": "Link"
+                        },
+                        {
+                            "append": "Append"
+                        }
+                    ]
+                }
+            ]
         },
         {
             "type": "schema_template",

@@ -7,8 +7,6 @@ from openpype.pipeline.anatomy import Anatomy
 from openpype.pipeline import legacy_io
 from openpype.settings.lib import get_project_settings
 
-print("lala")
-
 
 def _use_assets_library() -> bool:
     """Check if use of assets library is enabled.
@@ -19,7 +17,7 @@ def _use_assets_library() -> bool:
     project_name = legacy_io.Session["AVALON_PROJECT"]
     project_settings = get_project_settings(project_name)
     blender_settings = project_settings.get("blender", {})
-    return blender_settings.get("blender-assets-library-enabled")
+    return blender_settings.get("assets-library", {}).get("enabled", False)
 
 
 class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):

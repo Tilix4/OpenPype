@@ -20,9 +20,8 @@
     },
     "assets-library": {
         "enabled": true,
-        "folder": "{root[work]}/{project[name]}/AssetsLibrary"
+        "import_type": "link"
     },
-    "blender-assets-library-enabled": true,
     "workfile_builder": {
         "create_first_version": false,
         "custom_templates": []

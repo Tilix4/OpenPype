@@ -15,8 +15,12 @@ def setup_assets_library(*_args):
     project_name = legacy_io.Session["AVALON_PROJECT"]
     project_settings = get_project_settings(project_name)
     blender_settings = project_settings.get("blender", {})
+    assets_library_settings = blender_settings.get("assets-library")
 
-    if blender_settings.get("blender-assets-library-enabled"):
+    if not assets_library_settings:
+        return
+
+    if assets_library_settings.get("enabled", False):
         # Get OP asset library
         library = bpy.context.preferences.filepaths.asset_libraries.get(
             project_name
@@ -56,8 +60,9 @@ def setup_assets_library(*_args):
             main_space.params.asset_library_ref = project_name
 
             # Set import type
-            # TODO make it a setting
-            main_space.params.import_type = "LINK"
+            main_space.params.import_type = assets_library_settings.get(
+                "import_type", main_space.params.import_type
+            )
 
 
 def register():
