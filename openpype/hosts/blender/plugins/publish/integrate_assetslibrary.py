@@ -34,67 +34,45 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         """Make collection marked as asset available to be used from asset browser.
 
         Symlink hero blend file into folder dedicated for blender assets library.
+        NOTE: Only supports Collection type for assets because of OP's current implementation.
 
         Args:
             instance (List[Union[Collection, Object]]): List of integrated collections/objects
         """
-        marked_as_assets = [
-            obj
-            for obj in instance
-            if isinstance(obj, Collection) and obj.asset_data
-        ]
-
-        # Check if marked as asset
-        if not marked_as_assets:
-            return
-
         # Get instance useful data
         published_representations = instance.data.get(
             "published_representations"
         )
-        project_name = legacy_io.Session["AVALON_PROJECT"]
 
-        # Stop if disabled or Instance is without representations
-        if not published_representations:
+        # Get blend representation
+        blend_representation = next(
+            (
+                r
+                for r in published_representations.values()
+                if r.get("anatomy_data", {}).get("app") == "blender"
+            ),
+            None,
+        )
+        if not blend_representation:
             return
 
-        # Anatomy is primarily used for roots resolving
+        # Format anatomy for roots resolving
+        project_name = legacy_io.Session["AVALON_PROJECT"]
         anatomy = Anatomy(project_name)
+        formatted_anatomy = anatomy.format(
+            blend_representation["anatomy_data"]
+        )
 
-        # Extract asset filename from published representations
-        library_folder_path = ""
-        symlink_file = ""
-        for representation_data in published_representations.values():
-            anatomy_data = representation_data["anatomy_data"]
+        # Relevant resolved paths
+        library_folder_path = Path(
+            formatted_anatomy["blenderAssetsLibrary"]["folder"]
+        )
+        version_file = Path(
+            blend_representation["representation"]["data"]["path"]
+        )
+        symlink_file = Path(library_folder_path, f"{instance.name}.blend")
 
-            # Representation was not integrated
-            if not anatomy_data:
-                continue
-
-            # Get assets library path folder & hero file path
-            if anatomy_data.get("app") in self.hosts:
-                formatted_anatomy = anatomy.format(anatomy_data)
-                library_folder_path = Path(
-                    formatted_anatomy["blenderAssetsLibrary"]["folder"]
-                )
-                version_file = Path(
-                    representation_data["representation"]["data"]["path"]
-                )
-                symlink_file = Path(
-                    library_folder_path, f"{instance.name}.blend"
-                )
-                break
-
-        # Check assets library directory
-        if not library_folder_path.is_dir():
-            library_folder_path.mkdir(parents=True)
-
-        # Create symlink
-        if symlink_file.is_file():  # Delete existing one if any
-            symlink_file.unlink()
-        symlink_file.symlink_to(version_file)
-
-        # Get required files
+        # Get related catalog files
         source_file = Path(
             instance.data["versionEntity"]["data"]["source"].format_map(
                 {"root": anatomy.roots}
@@ -107,30 +85,70 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
             "blender_assets.cats.txt"
         )
 
+        # Check assets library directory
+        if not library_folder_path.is_dir():
+            library_folder_path.mkdir(parents=True)
+
+        # Check if file with same name exists and delete
+        if symlink_file.is_file():
+            symlink_file.unlink()
+
         # Get exisiting lines from library file
         if library_catalog_file.is_file():
             library_lines = library_catalog_file.read_text().splitlines()
         else:
             library_lines = []
 
+        # Get all UUIDs from objects
+        objects_uuids = tuple(
+            obj.asset_data.catalog_id
+            for obj in instance
+            if isinstance(obj, Collection) and obj.asset_data
+        )
+
+        # Sort UUIDs in file to delete cleared assets
+        if library_lines:
+            with library_catalog_file.open("w") as file:
+                kept_lines = [
+                    l for l in library_lines if not l.startswith(objects_uuids)
+                ]
+
+                # Write lines with modifications
+                file.write("\n".join(kept_lines) + "\n")
+
+        # Check if any objects is marked as asset
+        if not objects_uuids:
+            return
+
+        # Create symlink
+        symlink_file.symlink_to(version_file)
+
+        # Create/Update catalog references
         with library_catalog_file.open("w") as file:
             # Get source file text
             source_catalog_text = source_catalog_file.read_text()
 
             if library_lines:
-                # Iterate source file lines
-                source_lines = source_catalog_text.splitlines()
-                for line in source_lines:
+                # Skip comments and version lines
+                source_lines = [
+                    l
+                    for l in source_catalog_text.splitlines()
+                    if l != "" and not l.startswith(("#", "Version"))
+                ]
 
-                    # Skip comments and version line
-                    if line == "" or line.startswith(("#", "Version")):
-                        continue
+                # Update exisiting lines
+                updated_lines = set()
+                for line in source_lines:
                     # Update asset matched on UUID only if catalog ref has been changed
-                    else:
-                        asset_uuid = line.split(":")[0]
-                        for i, l in enumerate(library_lines):
-                            if l.startswith(asset_uuid) and l != line:
-                                library_lines[i] = line
+                    asset_uuid = line.split(":")[0]
+                    for i, l in enumerate(library_lines):
+                        if l.startswith(asset_uuid) and l != line:
+                            library_lines[i] = line
+                            updated_lines.add(line)
+                            break
+
+                # Add remaining lines
+                library_lines.extend(set(source_lines) - updated_lines)
 
                 # Write lines with modifications
                 file.write("\n".join(library_lines) + "\n")
