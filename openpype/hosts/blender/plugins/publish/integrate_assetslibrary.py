@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pyblish.api
 from bpy.types import Collection
+from openpype.client.entities import get_project_connection, get_subset_by_name
 
 from openpype.pipeline.anatomy import Anatomy
 from openpype.pipeline import legacy_io
@@ -70,7 +71,7 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         version_file = Path(
             blend_representation["representation"]["data"]["path"]
         )
-        symlink_file = Path(library_folder_path, f"{instance.name}.blend")
+        symlink_file = Path(library_folder_path, version_file.name)
 
         # Get related catalog files
         source_file = Path(
@@ -122,6 +123,18 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
 
         # Create symlink
         symlink_file.symlink_to(version_file)
+
+        # Keep marked as asset information in DB
+        dbcon = get_project_connection(project_name)
+        subset = get_subset_by_name(
+            project_name,
+            subset_name=instance.data["subset"],
+            asset_id=instance.data["assetEntity"]["_id"],
+        )
+        dbcon.update_one(
+            {"_id": subset["_id"]},
+            {"$set": {"data.blender.marked_as_asset": True}},
+        )
 
         # Create/Update catalog references
         with library_catalog_file.open("w") as file:

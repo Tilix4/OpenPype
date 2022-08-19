@@ -44,6 +44,7 @@ from openpype.lib.path_tools import version_up
 from openpype.tools.utils import host_tools
 from openpype.hosts.blender.scripts import build_workfile
 from openpype.tools.utils.lib import qt_app_context
+from .lib import build_assets_library
 from .workio import OpenFileCacher, save_file, work_root
 
 PREVIEW_COLLECTIONS: Dict = dict()
@@ -1384,6 +1385,17 @@ def discover_creators_handler(_):
         }
 
 
+class TOPBAR_OT_BuildAssetsLibrary(bpy.types.Operator):
+    """Build Assets Library"""
+
+    bl_idname = "wm.build_assets_library"
+    bl_label = "Build Assets Library"
+
+    def execute(self, context):
+        build_assets_library(os.environ.get("AVALON_PROJECT"))
+        return {"FINISHED"}
+
+
 classes = [
     LaunchCreator,
     LaunchLoader,
@@ -1402,6 +1414,7 @@ classes = [
     SCENE_OT_DuplicateOpenpypeInstance,
     SCENE_OT_MoveOpenpypeInstance,
     SCENE_OT_MoveOpenpypeInstanceDatablock,
+    TOPBAR_OT_BuildAssetsLibrary,
 ]
 
 
