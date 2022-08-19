@@ -3,8 +3,8 @@ from pathlib import Path
 import bpy
 from bpy.app.handlers import persistent
 
-from openpype.lib.anatomy import Anatomy
 from openpype.pipeline import install_host, legacy_io
+from openpype.pipeline.anatomy import Anatomy
 from openpype.hosts.blender import api
 from openpype.settings.lib import get_project_settings
 
@@ -62,7 +62,7 @@ def setup_assets_library(*_args):
             # Set import type
             main_space.params.import_type = assets_library_settings.get(
                 "import_type", main_space.params.import_type
-            )
+            ).upper()
 
 
 def register():
