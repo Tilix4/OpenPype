@@ -663,6 +663,23 @@ def download_last_workfile() -> str:
     )
 
 
+def resolve_assets_library_path(anatomy: Anatomy, context: dict) -> Path:
+    """Resolve assets library path for given anatomy and context data.
+
+    Args:
+        anatomy (Anatomy): Project's anatomy
+        context (dict): Context data
+
+    Returns:
+        Path: Path to directory to store the asset
+    """
+    formatted_anatomy = anatomy.format({"root": anatomy.roots, **context})
+    return Path(
+        formatted_anatomy["blenderAssetsLibrary"]["folder"],
+        f"{context['asset']}_{context['subset']}.blend",
+    )
+
+
 def build_assets_library(project_name: str):
     """Build assets library of given project.
 
@@ -703,13 +720,9 @@ def build_assets_library(project_name: str):
                 {"root": anatomy.roots}
             )
         )
-        formatted_anatomy = anatomy.format(
-            {"root": anatomy.roots, **blend_representation["context"]}
+        symlink_file = resolve_assets_library_path(
+            anatomy, blend_representation["context"]
         )
-        library_folder_path = Path(
-            formatted_anatomy["blenderAssetsLibrary"]["folder"]
-        )
-        symlink_file = Path(library_folder_path, version_file.name)
 
         # Create symlink
         if not symlink_file.is_file():

@@ -3,6 +3,7 @@ from pathlib import Path
 import pyblish.api
 from bpy.types import Collection
 from openpype.client.entities import get_project_connection, get_subset_by_name
+from openpype.hosts.blender.api.lib import resolve_assets_library_path
 
 from openpype.pipeline.anatomy import Anatomy
 from openpype.pipeline import legacy_io
@@ -60,18 +61,14 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         # Format anatomy for roots resolving
         project_name = legacy_io.Session["AVALON_PROJECT"]
         anatomy = Anatomy(project_name)
-        formatted_anatomy = anatomy.format(
-            blend_representation["anatomy_data"]
-        )
 
         # Relevant resolved paths
-        library_folder_path = Path(
-            formatted_anatomy["blenderAssetsLibrary"]["folder"]
-        )
         version_file = Path(
             blend_representation["representation"]["data"]["path"]
         )
-        symlink_file = Path(library_folder_path, version_file.name)
+        symlink_file = resolve_assets_library_path(
+            anatomy, blend_representation["anatomy_data"]
+        )
 
         # Get related catalog files
         source_file = Path(
@@ -82,13 +79,13 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         source_catalog_file = source_file.parent.joinpath(
             "blender_assets.cats.txt"
         )
-        library_catalog_file = library_folder_path.joinpath(
+        library_catalog_file = symlink_file.parent.joinpath(
             "blender_assets.cats.txt"
         )
 
         # Check assets library directory
-        if not library_folder_path.is_dir():
-            library_folder_path.mkdir(parents=True)
+        if not symlink_file.parent.is_dir():
+            symlink_file.parent.mkdir(parents=True)
 
         # Check if file with same name exists and delete
         if symlink_file.is_file():
