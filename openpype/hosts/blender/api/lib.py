@@ -687,7 +687,7 @@ def build_assets_library(project_name: str):
                 for r in get_representations(
                     project_name,
                     version_ids=[last_version["_id"]],
-                    fields=["name", "files"],
+                    fields=["name", "files", "context"],
                 )
                 if r["name"] == "blend"
             )
@@ -704,7 +704,7 @@ def build_assets_library(project_name: str):
             )
         )
         formatted_anatomy = anatomy.format(
-            {"root": anatomy.roots, "project": {"name": project_name}}
+            {"root": anatomy.roots, **blend_representation["context"]}
         )
         library_folder_path = Path(
             formatted_anatomy["blenderAssetsLibrary"]["folder"]
