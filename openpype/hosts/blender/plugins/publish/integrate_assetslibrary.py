@@ -133,6 +133,10 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
             {"$set": {"data.blender.marked_as_asset": True}},
         )
 
+        # Check there is a source catalog file
+        if not source_catalog_file.is_file():
+            return
+
         # Create/Update catalog references
         with library_catalog_file.open("w") as file:
             # Get source file text
