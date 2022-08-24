@@ -869,7 +869,7 @@ class IntegrateAsset(pyblish.api.InstancePlugin):
             repre["name"], version["_id"], repre_context, data, repre_id
         )
         update_data = None
-        if repre_id is not None:
+        if existing is not None:
             update_data = prepare_representation_update_data(
                 existing, repre_doc
             )
