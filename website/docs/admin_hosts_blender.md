@@ -88,3 +88,25 @@ You can close new terminal. Run pip install command above again. Now should work
 - Paths background management: In order to make remote working easier using sites sync by keeping blend file's references during file copies, paths must be constantly converted between relative and absolute. The user must always work in absolute paths, and the published files must store paths as relative. This option ensures this conversion in background. In short:
   - Published files: Relative paths
   - Workfiles: Absolute paths
+
+## Assets Library for Blender's Asset Browser
+
+You can enable (*default*) or disable Blender's [Asset Browser](https://docs.blender.org/manual/en/latest/editors/asset_browser.html) into `Project > Blender > Assets Library`.
+
+:::note
+It works only with `Collections` marked as assets (not with `Objects`), therefore with Blender versions from 3.2.0.
+
+### Import Type
+`Import Type` setting manages the loader associated to published collections marked as assets and how the asset collection will be imported to the blender scene when dropped from the Asset Browser (default `Link`).
+
+:::warning
+Because of Blender's context system and some missing handlers, inconsistencies may occur between the `Import Type` in Asset Browser's UI and the associated `loader` to the OpenPype asset. Most of the times, the `Manage...` windows will be sufficient to fix it.
+
+### Process
+When enabled, two steps are added at publishing: `Extract Assets Catalogs` at extraction and `Add to assets library` to the end of integration. At the end of the process, the published blend version file is symlinked to the `Assets Library` directory and the related [catalog file](https://docs.blender.org/manual/en/latest/files/asset_libraries/catalogs.html) is copied or appended if one is already present.
+
+### Template directory
+The setting of the `Assets Library` directory is an entry `blenderAssetsLibrary` under `Project > Anatomy > Templates > Others`. This entry has only one `folder` key accepting usual OpenPype's path template (default value is `root[work]/project[name]/AssetsLibrary`).
+
+### Build the library from scratch
+In the case the feature lands late in the production process, you're starting to work remotely or the library became too messy, you can delete the directory by hand and from an opened Blender, press `F3` and search for `Build Assets Library`, this will search for all *marked as assets* collections in local files and build the library directory.
