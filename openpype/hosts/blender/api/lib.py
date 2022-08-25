@@ -32,6 +32,8 @@ from openpype.client.entities import (
 from openpype.lib import Logger
 from openpype.pipeline.constants import AVALON_CONTAINER_ID
 from openpype.pipeline.load.utils import get_representation_path
+from openpype.pipeline import legacy_io
+from openpype.settings.lib import get_project_settings
 
 from . import pipeline
 
@@ -663,6 +665,18 @@ def download_last_workfile() -> str:
     )
 
 
+def use_assets_library() -> bool:
+    """Check if use of assets library is enabled.
+
+    Returns:
+        bool: Is use of assets library enabled
+    """
+    project_name = legacy_io.Session["AVALON_PROJECT"]
+    project_settings = get_project_settings(project_name)
+    blender_settings = project_settings.get("blender", {})
+    return blender_settings.get("assets-library", {}).get("enabled", False)
+
+
 def resolve_assets_library_path(anatomy: Anatomy, context: dict) -> Path:
     """Resolve assets library path for given anatomy and context data.
 
@@ -678,6 +692,65 @@ def resolve_assets_library_path(anatomy: Anatomy, context: dict) -> Path:
         formatted_anatomy["blenderAssetsLibrary"]["folder"],
         f"{context['asset']}_{context['subset']}.blend",
     )
+
+
+def build_catalog_file(source_blend_file: Path, symlink_blend_file: Path):
+    """Build catalog file from blend files.
+
+    Args:
+        source_blend_file (Path): Source blend file the catalog belongs to
+        symlink_blend_file (Path): Symlinked blend file in assets library directory
+    """
+
+    source_catalog_file = source_blend_file.parent.joinpath(
+        "blender_assets.cats.txt"
+    )
+    library_catalog_file = symlink_blend_file.parent.joinpath(
+        "blender_assets.cats.txt"
+    )
+
+    # Check there is a source catalog file
+    if not source_catalog_file.is_file():
+        return
+
+    # Get exisiting lines from library file
+    if library_catalog_file.is_file():
+        library_lines = library_catalog_file.read_text().splitlines()
+    else:
+        library_lines = []
+
+    # Create/Update catalog references
+    with library_catalog_file.open("w") as file:
+        # Get source file text
+        source_catalog_text = source_catalog_file.read_text()
+
+        if library_lines:
+            # Skip comments and version lines
+            source_lines = [
+                l
+                for l in source_catalog_text.splitlines()
+                if l != "" and not l.startswith(("#", "Version"))
+            ]
+
+            # Update exisiting lines
+            updated_lines = set()
+            for line in source_lines:
+                # Update asset matched on UUID only if catalog ref has been changed
+                asset_uuid = line.split(":")[0]
+                for i, l in enumerate(library_lines):
+                    if l.startswith(asset_uuid) and l != line:
+                        library_lines[i] = line
+                        updated_lines.add(line)
+                        break
+
+            # Add remaining lines
+            library_lines.extend(set(source_lines) - updated_lines)
+
+            # Write lines with modifications
+            file.write("\n".join(library_lines) + "\n")
+        else:
+            # Copy source text
+            file.write(source_catalog_text)
 
 
 def build_assets_library(project_name: str):
@@ -727,3 +800,5 @@ def build_assets_library(project_name: str):
         # Create symlink
         if not symlink_file.is_file():
             symlink_file.symlink_to(version_file)
+
+        build_catalog_file(version_file, symlink_file)

@@ -3,23 +3,14 @@ from pathlib import Path
 import pyblish.api
 from bpy.types import Collection
 from openpype.client.entities import get_project_connection, get_subset_by_name
-from openpype.hosts.blender.api.lib import resolve_assets_library_path
+from openpype.hosts.blender.api.lib import (
+    build_catalog_file,
+    use_assets_library,
+    resolve_assets_library_path,
+)
 
 from openpype.pipeline.anatomy import Anatomy
 from openpype.pipeline import legacy_io
-from openpype.settings.lib import get_project_settings
-
-
-def _use_assets_library() -> bool:
-    """Check if use of assets library is enabled.
-
-    Returns:
-        bool: Is use of assets library enabled
-    """
-    project_name = legacy_io.Session["AVALON_PROJECT"]
-    project_settings = get_project_settings(project_name)
-    blender_settings = project_settings.get("blender", {})
-    return blender_settings.get("assets-library", {}).get("enabled", False)
 
 
 class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
@@ -30,7 +21,7 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
     hosts = ["blender"]
     families = ["model"]
     optional = True
-    active = _use_assets_library()
+    active = use_assets_library()
 
     def process(self, instance):
         """Make collection marked as asset available to be used from asset browser.
@@ -70,19 +61,6 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
             anatomy, blend_representation["anatomy_data"]
         )
 
-        # Get related catalog files
-        source_file = Path(
-            instance.data["versionEntity"]["data"]["source"].format_map(
-                {"root": anatomy.roots}
-            )
-        )
-        source_catalog_file = source_file.parent.joinpath(
-            "blender_assets.cats.txt"
-        )
-        library_catalog_file = symlink_file.parent.joinpath(
-            "blender_assets.cats.txt"
-        )
-
         # Check assets library directory
         if not symlink_file.parent.is_dir():
             symlink_file.parent.mkdir(parents=True)
@@ -91,7 +69,25 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         if symlink_file.is_file():
             symlink_file.unlink()
 
+        # Create symlink
+        symlink_file.symlink_to(version_file)
+
+        # Keep marked as asset information in DB
+        dbcon = get_project_connection(project_name)
+        subset = get_subset_by_name(
+            project_name,
+            subset_name=instance.data["subset"],
+            asset_id=instance.data["assetEntity"]["_id"],
+        )
+        dbcon.update_one(
+            {"_id": subset["_id"]},
+            {"$set": {"data.blender.marked_as_asset": True}},
+        )
+
         # Get exisiting lines from library file
+        library_catalog_file = symlink_file.parent.joinpath(
+            "blender_assets.cats.txt"
+        )
         if library_catalog_file.is_file():
             library_lines = library_catalog_file.read_text().splitlines()
         else:
@@ -118,54 +114,12 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         if not objects_uuids:
             return
 
-        # Create symlink
-        symlink_file.symlink_to(version_file)
-
-        # Keep marked as asset information in DB
-        dbcon = get_project_connection(project_name)
-        subset = get_subset_by_name(
-            project_name,
-            subset_name=instance.data["subset"],
-            asset_id=instance.data["assetEntity"]["_id"],
+        source_file = Path(
+            instance.data["versionEntity"]["data"]["source"].format_map(
+                {"root": anatomy.roots}
+            )
         )
-        dbcon.update_one(
-            {"_id": subset["_id"]},
-            {"$set": {"data.blender.marked_as_asset": True}},
+        symlink_file = resolve_assets_library_path(
+            anatomy, blend_representation["anatomy_data"]
         )
-
-        # Check there is a source catalog file
-        if not source_catalog_file.is_file():
-            return
-
-        # Create/Update catalog references
-        with library_catalog_file.open("w") as file:
-            # Get source file text
-            source_catalog_text = source_catalog_file.read_text()
-
-            if library_lines:
-                # Skip comments and version lines
-                source_lines = [
-                    l
-                    for l in source_catalog_text.splitlines()
-                    if l != "" and not l.startswith(("#", "Version"))
-                ]
-
-                # Update exisiting lines
-                updated_lines = set()
-                for line in source_lines:
-                    # Update asset matched on UUID only if catalog ref has been changed
-                    asset_uuid = line.split(":")[0]
-                    for i, l in enumerate(library_lines):
-                        if l.startswith(asset_uuid) and l != line:
-                            library_lines[i] = line
-                            updated_lines.add(line)
-                            break
-
-                # Add remaining lines
-                library_lines.extend(set(source_lines) - updated_lines)
-
-                # Write lines with modifications
-                file.write("\n".join(library_lines) + "\n")
-            else:
-                # Copy source text
-                file.write(source_catalog_text)
+        build_catalog_file(source_file, library_catalog_file)
