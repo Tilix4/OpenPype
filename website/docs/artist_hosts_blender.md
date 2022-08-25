@@ -305,3 +305,10 @@ You can load published geometry nodes using [Loader](artist_tools.md#loader)
 select your nodegroup subset, right click on it and select **Link Nodegroup with reference (blend)**.
 If you want to load only the data block without any useless object populating the outliner you can select **Link Nodegroup only (blend)**
 and then assign it to an object using a modifier.
+
+## Using the Asset Browser
+
+If the setting is [enabled and correctly configured](admin_hosts_blender.md#assets-library-for-blenders-asset-browser) you can use Blender's [Asset Browser](https://docs.blender.org/manual/en/latest/editors/asset_browser.html) to drop files in your workfile's scene as if they were loaded by the `Manage...` windows.
+
+:::warning
+Because of Blender's context system you might encounter consistency issues between the associated `loader` and the `Import Type` setting in the Asset Browser. **It's recommended to open a Blender session where an Asset Browser area is already displayed!** (if not built like required at startup, set an area to the Asset Browser, save your workfile and launch the task again).
