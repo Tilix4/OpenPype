@@ -312,3 +312,6 @@ If the setting is [enabled and correctly configured](admin_hosts_blender.md#asse
 
 :::warning
 Because of Blender's context system you might encounter consistency issues between the associated `loader` and the `Import Type` setting in the Asset Browser. **It's recommended to open a Blender session where an Asset Browser area is already displayed!** (if not built like required at startup, set an area to the Asset Browser, save your workfile and launch the task again).
+
+### Publish Blender Asset
+After the instance collection is created, it is possible to mark it as asset by right clicking on the collection in the outliner and choose `Mark as Asset`.
