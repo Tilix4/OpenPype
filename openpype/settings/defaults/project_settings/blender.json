@@ -59,7 +59,7 @@
                 "action",
                 "layout",
                 "setdress",
-                "blender_nodegroup"
+                "blender.nodegroup"
             ]
         },
         "ExtractBlendMaterials": {
