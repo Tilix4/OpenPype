@@ -79,8 +79,7 @@
                 "rig",
                 "action",
                 "layout",
-                "setdress",
-                "blender.nodegroup"
+                "setdress"
             ]
         },
         "ExtractBlendMaterials": {
