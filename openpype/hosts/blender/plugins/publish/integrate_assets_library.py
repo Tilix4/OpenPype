@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 
 import pyblish.api
 from bpy.types import Collection
@@ -11,6 +12,7 @@ from openpype.hosts.blender.api.lib import (
 
 from openpype.pipeline.anatomy import Anatomy
 from openpype.pipeline import legacy_io
+from openpype.settings.lib import get_project_settings
 
 
 class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
@@ -66,20 +68,28 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         version_file = Path(
             blend_representation["representation"]["data"]["path"]
         )
-        symlink_file = resolve_assets_library_path(
+        library_file = resolve_assets_library_path(
             anatomy, blend_representation["anatomy_data"]
         )
 
         # Check assets library directory
-        if not symlink_file.parent.is_dir():
-            symlink_file.parent.mkdir(parents=True)
+        if not library_file.parent.is_dir():
+            library_file.parent.mkdir(parents=True)
 
         # Check if file with same name exists and delete
-        if symlink_file.is_file():
-            symlink_file.unlink()
+        if library_file.is_file():
+            library_file.unlink()
 
-        # Create symlink
-        symlink_file.symlink_to(version_file)
+        # Create ref in library, symlink if enabled, else copy
+        project_settings = get_project_settings(
+            instance.data["projectEntity"]["name"]
+        )
+        blender_settings = project_settings.get("blender", {})
+        assets_library_settings = blender_settings.get("assets-library")
+        if assets_library_settings.get("use_symlink"):
+            library_file.symlink_to(version_file)
+        else:
+            shutil.copyfile(version_file, library_file)
 
         # Keep marked as asset information in DB
         dbcon = get_project_connection(project_name)
@@ -94,7 +104,7 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         )
 
         # Get exisiting lines from library file
-        library_catalog_file = symlink_file.parent.joinpath(
+        library_catalog_file = library_file.parent.joinpath(
             "blender_assets.cats.txt"
         )
         if library_catalog_file.is_file():
@@ -126,7 +136,7 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
                 {"root": anatomy.roots}
             )
         )
-        symlink_file = resolve_assets_library_path(
+        library_file = resolve_assets_library_path(
             anatomy, blend_representation["anatomy_data"]
         )
         build_catalog_file(source_file, library_catalog_file)

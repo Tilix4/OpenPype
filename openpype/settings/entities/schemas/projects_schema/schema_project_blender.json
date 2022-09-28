@@ -78,6 +78,11 @@
                     "label": "Use Blender Assets Library"
                 },
                 {
+                    "type": "boolean",
+                    "key": "use_symlinks",
+                    "label": "Use Symlink"
+                },
+                {
                     "key": "import_type",
                     "label": "Import Type",
                     "type": "enum",

@@ -96,6 +96,12 @@ You can enable (*default*) or disable Blender's [Asset Browser](https://docs.ble
 :::note
 It works only with `Collections` marked as assets (not with `Objects`), therefore with Blender versions from 3.2.0.
 
+### Symlink blend files in library
+:::warning
+Works only on Unix systems! Cannot ensure correct behaviour with Windows OS.
+
+To optimize disk usage or files references you might want to use symlinks to versions instead of copying files. To do so, enable `Use Symlink` setting.
+
 ### Import Type
 `Import Type` setting manages the loader associated to published collections marked as assets and how the asset collection will be imported to the blender scene when dropped from the Asset Browser (default `Link`).
 
