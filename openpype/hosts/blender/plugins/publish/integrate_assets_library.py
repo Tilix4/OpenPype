@@ -49,6 +49,15 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
         if not blend_representation:
             return
 
+        # Collect collections marked as assets
+        collections_marked_as_assets = {
+            obj
+            for obj in instance
+            if isinstance(obj, Collection) and obj.asset_data
+        }
+        if not collections_marked_as_assets:
+            return
+
         # Format anatomy for roots resolving
         project_name = legacy_io.Session["AVALON_PROJECT"]
         anatomy = Anatomy(project_name)
@@ -95,9 +104,7 @@ class IntegrateAssetsLibrary(pyblish.api.InstancePlugin):
 
         # Get all UUIDs from objects
         objects_uuids = tuple(
-            obj.asset_data.catalog_id
-            for obj in instance
-            if isinstance(obj, Collection) and obj.asset_data
+            obj.asset_data.catalog_id for obj in collections_marked_as_assets
         )
 
         # Sort UUIDs in file to delete cleared assets
