@@ -39,6 +39,12 @@ class CollectReview(pyblish.api.InstancePlugin):
             and obj.type in ("MESH", "CURVE", "SURFACE")
         ]
 
+        review_instances = [
+            context_instance
+            for context_instance in instance.context
+            if context_instance.data.get("family") == "review"
+        ]
+
         reviewable_instances = [
             context_instance
             for context_instance in instance.context
@@ -47,11 +53,7 @@ class CollectReview(pyblish.api.InstancePlugin):
             )
         ]
 
-        if reviewable_instances:
-            if len(reviewable_instances) > 1:
-                self.log.warning(
-                    f"Multiple subsets for review {reviewable_instances}"
-                )
+        if reviewable_instances == 1 and review_instances == 1:
 
             reviewable_instance = reviewable_instances[0]
             self.log.debug(f"Subset for review: {reviewable_instance}")
@@ -73,8 +75,11 @@ class CollectReview(pyblish.api.InstancePlugin):
 
             task = legacy_io.Session.get("AVALON_TASK")
 
+            subset = instance.data.get("subset")
+            subset = subset[0].upper() + subset[1:]
+
             instance.data.update({
-                "subset": f"{task}Review",
+                "subset": f"{task}{subset}",
                 "review_camera": camera,
                 "frameStart": instance.context.data["frameStart"],
                 "frameEnd": instance.context.data["frameEnd"],
