@@ -14,6 +14,7 @@ from . import ops
 import pyblish.api
 
 from openpype.client import get_asset_by_name
+from openpype.settings import get_project_settings
 from openpype.pipeline import (
     schema,
     legacy_io,
@@ -175,7 +176,17 @@ def set_resolution(data):
     scene.render.resolution_y = resolution_y
 
 
+def set_use_file_compression():
+    project_name = legacy_io.active_project()
+    project_setting = get_project_settings(project_name)
+    compress = project_setting["blender"]["general"].get("compress")
+    bpy.context.preferences.filepaths.use_file_compression = compress
+    print(f"filepaths.use_file_compression = {compress}")
+
+
 def on_new():
+    set_use_file_compression()
+
     project = os.environ.get("AVALON_PROJECT")
     settings = get_project_settings(project).get("blender")
 
@@ -197,6 +208,8 @@ def on_new():
 
 
 def on_open():
+    set_use_file_compression()
+
     project = os.environ.get("AVALON_PROJECT")
     settings = get_project_settings(project).get("blender")
 
@@ -245,6 +258,8 @@ def _on_load_post(*args):
         emit_event("new")
 
     ops.OpenFileCacher.post_load()
+    
+    print("_on_load_post")
 
 
 def _register_callbacks():
