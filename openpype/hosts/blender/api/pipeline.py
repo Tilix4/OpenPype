@@ -8,7 +8,7 @@ import bpy
 from openpype.client.entities import get_asset_by_name
 
 from . import lib
-from . import ops
+from . import ops, properties
 
 import pyblish.api
 
@@ -77,6 +77,7 @@ def install():
 
     if not IS_HEADLESS:
         ops.register()
+        properties.register()
 
 
 def uninstall():
@@ -92,6 +93,7 @@ def uninstall():
 
     if not IS_HEADLESS:
         ops.unregister()
+        properties.unregister()
 
 
 def show_message(title, message):
