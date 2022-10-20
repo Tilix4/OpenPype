@@ -1,4 +1,5 @@
 """Create a layout asset."""
+import bpy
 
 import bpy
 
@@ -16,3 +17,4 @@ class CreateLayout(plugin.Creator):
     icon = "cubes"
     defaults = ["Main", "FromAnimation"]
     color_tag = "COLOR_02"
+    bl_types = (bpy.types.Collection, bpy.types.Object)

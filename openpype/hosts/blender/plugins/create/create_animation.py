@@ -1,4 +1,5 @@
 """Create an animation asset."""
+import bpy
 
 import bpy
 
@@ -16,6 +17,7 @@ class CreateAnimation(plugin.Creator):
     family = "animation"
     icon = "male"
     color_tag = "COLOR_07"
+    bl_types = (bpy.types.Action,)
 
     def _use_selection(self, container):
         selected_objects = set(get_selection())
