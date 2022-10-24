@@ -43,6 +43,7 @@ class CollectBlenderCurrentFile(pyblish.api.ContextPlugin):
 
         # create instance
         instance = context.create_instance(name=filename)
+        task = get_current_task_name()
         subset = "workfile" + task.capitalize()
 
         data.update({
@@ -68,5 +69,4 @@ class CollectBlenderCurrentFile(pyblish.api.ContextPlugin):
 
         self.log.info("Collected instance: {}".format(file))
         self.log.info("Scene path: {}".format(current_file))
-        self.log.info("staging Dir: {}".format(folder))
         self.log.info("subset: {}".format(subset))
