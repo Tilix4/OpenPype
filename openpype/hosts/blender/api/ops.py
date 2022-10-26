@@ -418,14 +418,11 @@ class SimpleOperator(bpy.types.Operator):
         update=_update_entries_preset,
     )
 
-    asset_name: EnumProperty(
+    all_assets: bpy.props.CollectionProperty(
         name="Asset Name",
-        # Items are defaults from current creator plugin
-        items=lambda _, __: [
-            (asset_doc["name"], asset_doc["name"], "")
-            for asset_doc in get_assets(legacy_io.active_project())
-        ]
-    ) # TODO make it a prop search with two properties to search data
+        type=bpy.types.PropertyGroup,
+    )
+    asset_name: bpy.props.StringProperty(name="Asset Name")
 
     # Variant
     variant_name: bpy.props.StringProperty(
@@ -455,6 +452,11 @@ class SimpleOperator(bpy.types.Operator):
     datablock: bpy.props.StringProperty(name="Datablock")
 
     def __init__(self) -> None:
+        # Set assets list
+        self.all_assets.clear()
+        for asset_doc in get_assets(legacy_io.active_project()):
+            self.all_assets.add().name = asset_doc["name"]
+            
         self.asset_name = legacy_io.Session["AVALON_ASSET"]
 
         # Setup all data
@@ -471,7 +473,7 @@ class SimpleOperator(bpy.types.Operator):
         layout = self.layout
 
         layout.prop(self, "creator")
-        layout.prop(self, "asset_name")
+        layout.prop_search(self, "asset_name", self, "all_assets")
 
         # Variant with defaults list
         sublayout = layout.row(align=True)
@@ -511,6 +513,10 @@ class SimpleOperator(bpy.types.Operator):
                 row.prop(self, "datapath", text="", icon_only=True)
 
     def execute(self, _context):
+        if not self.asset_name:
+            self.report({"ERROR"}, f"Asset name must be filled!")
+            return {"CANCELLED"}
+
         # Get creator class
         Creator = get_legacy_creator_by_name(self.creator)
 
