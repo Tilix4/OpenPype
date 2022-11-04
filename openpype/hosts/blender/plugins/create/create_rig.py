@@ -17,4 +17,4 @@ class CreateRig(plugin.Creator):
     icon = "wheelchair"
     defaults = ["Main", "Proxy"]
     color_tag = "COLOR_03"
-    bl_types = (bpy.types.Armature,)
+    bl_types = frozenset({bpy.types.Armature})
