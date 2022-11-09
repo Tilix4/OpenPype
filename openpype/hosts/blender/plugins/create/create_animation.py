@@ -1,4 +1,5 @@
 """Create an animation asset."""
+from typing import List
 import bpy
 
 import bpy
@@ -7,6 +8,7 @@ from openpype.pipeline import get_current_task_name
 from openpype.hosts.blender.api import plugin, lib, ops
 from openpype.hosts.blender.api.pipeline import AVALON_INSTANCES
 from openpype.hosts.blender.api.lib import get_selection
+from openpype.hosts.blender.api.properties import OpenpypeInstance
 
 
 class CreateAnimation(plugin.Creator):
@@ -32,9 +34,11 @@ class CreateAnimation(plugin.Creator):
         plugin.link_to_collection(selected_collections, container)
         plugin.link_to_collection(selected_objects, container)
 
-    def _process(self):
+    def _process(
+        self, datablocks: List[bpy.types.ID] = None
+    ) -> OpenpypeInstance:
         # Get Instance Container
-        container = super()._process()
+        container = super()._process(datablocks)
 
         if (self.options or {}).get("members"):
             plugin.link_to_collection(self.options["members"], container)
