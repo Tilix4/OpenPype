@@ -281,7 +281,13 @@ def _get_configured_sites_from_setting(module, project_name, project_setting):
 
 
 def get_last_published_workfile_path(
-    host_name: str, project_name: str, asset_name: str, task_name: str, anatomy: Anatomy=None, asset_doc: dict=None, workfile_representation: dict=None
+    host_name: str,
+    project_name: str,
+    asset_name: str,
+    task_name: str,
+    anatomy: Anatomy = None,
+    asset_doc: dict = None,
+    workfile_representation: dict = None,
 ) -> str:
     if not anatomy:
         anatomy = Anatomy(project_name)
@@ -344,13 +350,9 @@ def download_last_published_workfile(
 ) -> str:
     # sync server, last workfile
     # TODO: differentiate new workfile vs updated workfile
-    anatomy = Anatomy(
-        project_name
-    )
+    anatomy = Anatomy(project_name)
     project_doc = get_project(project_name)
-    asset_doc = get_asset_by_name(
-        project_name, asset_name
-    )
+    asset_doc = get_asset_by_name(project_name, asset_name)
 
     sync_server = ModulesManager().modules_by_name.get("sync_server")
     if not sync_server or not sync_server.enabled:
@@ -376,13 +378,36 @@ def download_last_published_workfile(
             task_name=task_name,
             host_name=host_name,
         ),
-        file_extensions,
+        get_host_extensions(host_name),
         full_path=True,
     )
     # Not sure if this is always correct
     if os.path.exists(last_workfile):
         print("Last workfile exists. Skipping sync_server process.")
     # return
+
+    # Get subset id
+    subset_id = next(
+        (
+            subset["_id"]
+            for subset in get_subsets(
+                project_name,
+                asset_ids=[asset_doc["_id"]],
+                fields=["_id", "data.family", "data.families"],
+            )
+            if subset["data"].get("family") == "workfile"
+            # Legacy compatibility
+            or "workfile" in subset["data"].get("families", {})
+        ),
+        None,
+    )
+    if not subset_id:
+        print("Subset id not found for asset '{}'.".format(asset_doc["name"]))
+        return
+
+    last_version_doc = get_last_version_doc = get_last_version_by_subset_id(
+        project_name, subset_id, fields=["_id"]
+    )
 
     workfile_representation = next(
         (
@@ -421,13 +446,25 @@ def download_last_published_workfile(
 
     shutil.copy(
         get_last_published_workfile_path(
-            host_name, project_name, asset_name, task_name
+            host_name,
+            project_name,
+            asset_name,
+            task_name,
+            anatomy=anatomy,
+            asset_doc=asset_doc,
+            workfile_representation=workfile_representation,
         ),
         new_workfile_path,
     )
 
     # Not sure yet if I should return a value or not
     return new_workfile_path
+
+
+def get_host_extensions(host_name: str) -> list:
+    host_module = ModulesManager().get_host_module(host_name)
+    if host_module is not None:
+        return host_module.get_workfile_extensions()
 
 
 class SyncServerThread(threading.Thread):
