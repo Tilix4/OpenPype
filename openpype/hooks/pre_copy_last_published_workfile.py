@@ -14,6 +14,7 @@ from openpype.pipeline.load.utils import get_representation_path
 from openpype.pipeline.template_data import get_template_data_with_names
 from openpype.pipeline.workfile.path_resolving import get_workfile_template_key
 from openpype.settings.lib import get_project_settings
+from openpype.modules.sync_server.sync_server import download_last_published_workfile
 
 
 class CopyLastPublishedWorkfile(PreLaunchHook):
@@ -98,6 +99,13 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
             return
 
         self.log.info("Trying to fetch last published workfile...")
+        self.data["last_workfile_path"] = download_last_published_workfile(
+            host_name,
+            project_name,
+            self.data["asset_name"],
+            task_name
+        )
+        return
 
         project_doc = self.data.get("project_doc")
         asset_doc = self.data.get("asset_doc")

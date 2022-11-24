@@ -288,45 +288,49 @@ def get_last_published_workfile_path(
     anatomy: Anatomy = None,
     asset_doc: dict = None,
     workfile_representation: dict = None,
+    subset_id: str = None,
+    last_version_doc: dict = None,
 ) -> str:
     if not anatomy:
         anatomy = Anatomy(project_name)
     if not asset_doc:
         asset_doc = get_asset_by_name(project_name, asset_name)
 
-    # Get subset id
-    subset_id = next(
-        (
-            subset["_id"]
-            for subset in get_subsets(
-                project_name,
-                asset_ids=[asset_doc["_id"]],
-                fields=["_id", "data.family", "data.families"],
-            )
-            if subset["data"].get("family") == "workfile"
-            # Legacy compatibility
-            or "workfile" in subset["data"].get("families", {})
-        ),
-        None,
-    )
     if not subset_id:
-        print("Subset id not found for asset '{}'.".format(asset_doc["name"]))
-        return
+        # Get subset id
+        subset_id = next(
+            (
+                subset["_id"]
+                for subset in get_subsets(
+                    project_name,
+                    asset_ids=[asset_doc["_id"]],
+                    fields=["_id", "data.family", "data.families"],
+                )
+                if subset["data"].get("family") == "workfile"
+                # Legacy compatibility
+                or "workfile" in subset["data"].get("families", {})
+            ),
+            None,
+        )
+        if not subset_id:
+            print("Subset id not found for asset '{}'.".format(asset_doc["name"]))
+            return
 
-    # Get workfile representation
-    last_version_doc = get_last_version_by_subset_id(
-        project_name, subset_id, fields=["_id"]
-    )
     if not last_version_doc:
-        print("Subset does not have any version.")
-        return
+        # Get workfile representation
+        last_version_doc = get_last_version_by_subset_id(
+            project_name, subset_id, fields=["_id"]
+        )
+        if not last_version_doc:
+            print("Subset does not have any version.")
+            return
 
     if not workfile_representation:
         workfile_representation = next(
             (
                 representation
                 for representation in get_representations(
-                    project_name, versions_ids=[last_version_doc["_id"]]
+                    project_name, version_ids=[last_version_doc["_id"]]
                 )
                 if representation["context"]["task"]["name"] == task_name
             ),
@@ -348,7 +352,6 @@ def get_last_published_workfile_path(
 def download_last_published_workfile(
     host_name: str, project_name: str, asset_name: str, task_name: str
 ) -> str:
-    # sync server, last workfile
     # TODO: differentiate new workfile vs updated workfile
     anatomy = Anatomy(project_name)
     project_doc = get_project(project_name)
@@ -378,7 +381,7 @@ def download_last_published_workfile(
             task_name=task_name,
             host_name=host_name,
         ),
-        get_host_extensions(host_name),
+        ModulesManager().get_host_module(host_name).get_workfile_extensions(),
         full_path=True,
     )
     # Not sure if this is always correct
@@ -405,7 +408,7 @@ def download_last_published_workfile(
         print("Subset id not found for asset '{}'.".format(asset_doc["name"]))
         return
 
-    last_version_doc = get_last_version_doc = get_last_version_by_subset_id(
+    last_version_doc = get_last_version_by_subset_id(
         project_name, subset_id, fields=["_id"]
     )
 
@@ -413,7 +416,7 @@ def download_last_published_workfile(
         (
             representation
             for representation in get_representations(
-                project_name, versions_ids=[last_version_doc["_id"]]
+                project_name, version_ids=[last_version_doc["_id"]]
             )
             if representation["context"]["task"]["name"] == task_name
         ),
@@ -426,6 +429,8 @@ def download_last_published_workfile(
             )
         )
         return
+
+    print(f"workfile rep: {workfile_representation}")
 
     local_site_id = get_local_site_id()
     sync_server.add_site(
@@ -442,7 +447,7 @@ def download_last_published_workfile(
     ):
         sleep(5)
 
-    new_workfile_path = version_up(last_workfile)
+    new_workfile_path = version_up(last_workfile) # New files are marked as v002
 
     shutil.copy(
         get_last_published_workfile_path(
@@ -453,18 +458,13 @@ def download_last_published_workfile(
             anatomy=anatomy,
             asset_doc=asset_doc,
             workfile_representation=workfile_representation,
+            subset_id=subset_id,
+            last_version_doc=last_version_doc,
         ),
         new_workfile_path,
     )
 
-    # Not sure yet if I should return a value or not
     return new_workfile_path
-
-
-def get_host_extensions(host_name: str) -> list:
-    host_module = ModulesManager().get_host_module(host_name)
-    if host_module is not None:
-        return host_module.get_workfile_extensions()
 
 
 class SyncServerThread(threading.Thread):
