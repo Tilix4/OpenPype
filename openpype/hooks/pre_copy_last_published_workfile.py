@@ -14,7 +14,9 @@ from openpype.pipeline.load.utils import get_representation_path
 from openpype.pipeline.template_data import get_template_data_with_names
 from openpype.pipeline.workfile.path_resolving import get_workfile_template_key
 from openpype.settings.lib import get_project_settings
-from openpype.modules.sync_server.sync_server import download_last_published_workfile
+from openpype.modules.sync_server.sync_server import (
+    download_last_published_workfile,
+)
 
 
 class CopyLastPublishedWorkfile(PreLaunchHook):
@@ -40,11 +42,6 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
         Returns:
             None: This is a void method.
         """
-
-        sync_server = self.modules_manager.get("sync_server")
-        if not sync_server or not sync_server.enabled:
-            self.log.debug("Sync server module is not enabled or available")
-            return
 
         # Check there is no workfile available
         last_workfile = self.data.get("last_workfile_path")
@@ -103,132 +100,8 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
             host_name,
             project_name,
             self.data["asset_name"],
-            task_name
-        )
-        return
-
-        project_doc = self.data.get("project_doc")
-        asset_doc = self.data.get("asset_doc")
-        anatomy = self.data.get("anatomy")
-
-        # Check it can proceed
-        if not project_doc and not asset_doc:
-            return
-
-        # Get subset id
-        filtered_subsets = [
-            subset
-            for subset in get_subsets(
-                project_name,
-                asset_ids=[asset_doc["_id"]],
-                fields=["_id", "name", "data.family", "data.families"],
-            )
-            if (
-                subset["data"].get("family") == "workfile"
-                # Legacy compatibility
-                or "workfile" in subset["data"].get("families", {})
-            )
-        ]
-        if not filtered_subsets:
-            self.log.debug(
-                "No any subset for asset '{}' with id '{}'.".format(
-                    asset_name, asset_doc["_id"]
-                )
-            )
-            return
-
-        # Matching subset which has task name in its name
-        subset_id = None
-        low_task_name = task_name.lower()
-        if len(filtered_subsets) > 1:
-            for subset in filtered_subsets:
-                if low_task_name in subset["name"].lower():
-                    subset_id = subset["_id"]
-                    break
-        else:
-            subset_id = filtered_subsets[0]["_id"]
-
-        # Set default matched subset
-        if subset_id is None:
-            self.log.debug(
-                "No any matched subset for task '{}' of '{}'.".format(
-                    low_task_name, asset_name
-                )
-            )
-            return
-
-        # Get workfile representation
-        last_version_doc = get_last_version_by_subset_id(
-            project_name, subset_id, fields=["_id", "name"]
-        )
-        if not last_version_doc:
-            self.log.debug("Subset does not have any versions")
-            return
-
-        workfile_representation = next(
-            (
-                representation
-                for representation in get_representations(
-                    project_name, version_ids=[last_version_doc["_id"]]
-                )
-                if representation["context"]["task"]["name"] == task_name
-            ),
-            None,
-        )
-
-        if not workfile_representation:
-            self.log.debug(
-                'No published workfile for task "{}" and host "{}".'.format(
-                    task_name, host_name
-                )
-            )
-            return
-
-        local_site_id = get_local_site_id()
-
-        # Tag worfile and linked representations to be downloaded
-        representation_ids = {workfile_representation["_id"]}
-        representation_ids.update(
-            get_linked_representation_id(
-                project_name, repre_id=workfile_representation["_id"]
-            )
-        )
-        for repre_id in representation_ids:
-            sync_server.add_site(
-                project_name,
-                repre_id,
-                local_site_id,
-                force=True,
-                priority=99,
-                reset_timer=True,
-            )
-
-        while not sync_server.is_representation_on_site(
-            project_name, workfile_representation["_id"], local_site_id
-        ):
-            sleep(5)
-
-        # Get paths
-        published_workfile_path = get_representation_path(
-            workfile_representation, root=anatomy.roots
-        )
-
-        # Build workfile to copy and open's name from anatomy template settings
-        workfile_data = get_template_data_with_names(
-            project_name, asset_name, task_name, host_name
-        )
-        workfile_data["version"] = last_version_doc["name"] + 1
-        workfile_data["ext"] = os.path.splitext(published_workfile_path)[-1]
-        template_key = get_workfile_template_key(
-            task_type, host_name, project_name, project_settings
-        )
-        anatomy_result = anatomy.format(workfile_data)
-        local_workfile_path = anatomy_result[template_key]["path"]
-
-        # Copy file and substitute path
-        self.data["last_workfile_path"] = shutil.copy(
-            published_workfile_path,
-            local_workfile_path,
+            task_name,
+            last_workfile=last_workfile,
         )
 
         # Keep source filepath for further path conformation

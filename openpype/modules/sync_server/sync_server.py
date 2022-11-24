@@ -291,6 +291,25 @@ def get_last_published_workfile_path(
     subset_id: str = None,
     last_version_doc: dict = None,
 ) -> str:
+    """Returns last published workfile path.
+    Optional arguments can be filled as an optimisation.
+
+    Args:
+        host_name (str): Host name.
+        project_name (str): Project name.
+        asset_name (str): Asset name.
+        task_name (str): Task name.
+        anatomy (Anatomy, optional): Anatomy. Defaults to None.
+        asset_doc (dict, optional): Asset dictionary. Defaults to None.
+        workfile_representation (dict, optional): Workfile representation.
+            Defaults to None.
+        subset_id (str, optional): Subset id. Defaults to None.
+        last_version_doc (dict, optional): Last version dictionary.
+            Defaults to None.
+
+    Returns:
+        str: Last published workfile path.
+    """
     if not anatomy:
         anatomy = Anatomy(project_name)
     if not asset_doc:
@@ -313,7 +332,9 @@ def get_last_published_workfile_path(
             None,
         )
         if not subset_id:
-            print("Subset id not found for asset '{}'.".format(asset_doc["name"]))
+            print(
+                "Subset id not found for asset '{}'.".format(asset_doc["name"])
+            )
             return
 
     if not last_version_doc:
@@ -350,9 +371,26 @@ def get_last_published_workfile_path(
 
 
 def download_last_published_workfile(
-    host_name: str, project_name: str, asset_name: str, task_name: str
+    host_name: str,
+    project_name: str,
+    asset_name: str,
+    task_name: str,
+    last_workfile: str = None,
 ) -> str:
-    # TODO: differentiate new workfile vs updated workfile
+    """Downloads the last pusblished workfile, and returns its path.
+
+    Args:
+        host_name (str): Host name.
+        project_name (str): Project name.
+        asset_name (str): Asset name.
+        task_name (str): Task name.
+        last_workfile (str, optional): Last (local) workfile path.
+            Defaults to None.
+
+    Returns:
+        str: _description_
+    """
+    # TODO: Add availability check
     anatomy = Anatomy(project_name)
     project_doc = get_project(project_name)
     asset_doc = get_asset_by_name(project_name, asset_name)
@@ -361,33 +399,6 @@ def download_last_published_workfile(
     if not sync_server or not sync_server.enabled:
         print("Sunc server module is disabled or unavailable.")
         return
-
-    last_workfile = get_last_workfile(
-        get_workdir(
-            project_doc, asset_doc, task_name, host_name, anatomy=anatomy
-        ),
-        str(
-            anatomy.templates[
-                get_workfile_template_key(
-                    task_name,
-                    host_name,
-                    project_name,
-                )
-            ]["file"]
-        ),
-        get_template_data(
-            project_doc,
-            asset_doc=asset_doc,
-            task_name=task_name,
-            host_name=host_name,
-        ),
-        ModulesManager().get_host_module(host_name).get_workfile_extensions(),
-        full_path=True,
-    )
-    # Not sure if this is always correct
-    if os.path.exists(last_workfile):
-        print("Last workfile exists. Skipping sync_server process.")
-    # return
 
     # Get subset id
     subset_id = next(
@@ -447,7 +458,33 @@ def download_last_published_workfile(
     ):
         sleep(5)
 
-    new_workfile_path = version_up(last_workfile) # New files are marked as v002
+    if not last_workfile:
+        last_workfile = get_last_workfile(
+            get_workdir(
+                project_doc, asset_doc, task_name, host_name, anatomy=anatomy
+            ),
+            str(
+                anatomy.templates[
+                    get_workfile_template_key(
+                        task_name,
+                        host_name,
+                        project_name,
+                    )
+                ]["file"]
+            ),
+            get_template_data(
+                project_doc,
+                asset_doc=asset_doc,
+                task_name=task_name,
+                host_name=host_name,
+            ),
+            ModulesManager()
+            .get_host_module(host_name)
+            .get_workfile_extensions(),
+            full_path=True,
+        )
+    if os.path.exists(last_workfile):
+        last_workfile = version_up(last_workfile)
 
     shutil.copy(
         get_last_published_workfile_path(
@@ -461,10 +498,10 @@ def download_last_published_workfile(
             subset_id=subset_id,
             last_version_doc=last_version_doc,
         ),
-        new_workfile_path,
+        last_workfile,
     )
 
-    return new_workfile_path
+    return last_workfile
 
 
 class SyncServerThread(threading.Thread):
