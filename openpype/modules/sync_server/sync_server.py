@@ -10,19 +10,11 @@ from concurrent.futures._base import CancelledError
 from .providers import lib
 from openpype.lib import Logger
 from openpype.lib.local_settings import get_local_site_id
-from openpype.lib.path_tools import version_up
 from openpype.modules.base import ModulesManager
 from openpype.pipeline import Anatomy
-from openpype.pipeline.template_data import (
-    get_template_data,
-    get_template_data_with_names,
-)
+from openpype.pipeline.template_data import get_template_data_with_names
 from openpype.pipeline.load.utils import get_representation_path_with_anatomy
-from openpype.pipeline.workfile.path_resolving import (
-    get_last_workfile,
-    get_workdir,
-    get_workfile_template_key,
-)
+from openpype.pipeline.workfile.path_resolving import get_workfile_template_key
 from openpype.settings.lib import get_project_settings
 from openpype.client.entities import (
     get_last_version_by_subset_id,
@@ -375,7 +367,10 @@ def download_last_published_workfile(
     project_name: str,
     asset_name: str,
     task_name: str,
-    last_workfile: str = None,
+    last_published_workfile_path: str = None,
+    anatomy: Anatomy = None,
+    asset_doc: dict = None,
+    subset_id: str = None,
 ) -> str:
     """Downloads the last pusblished workfile, and returns its path.
 
@@ -397,27 +392,19 @@ def download_last_published_workfile(
 
     sync_server = ModulesManager().modules_by_name.get("sync_server")
     if not sync_server or not sync_server.enabled:
-        print("Sunc server module is disabled or unavailable.")
+        print("Sync server module is disabled or unavailable.")
         return
 
     # Get subset id
-    subset_id = next(
-        (
-            subset["_id"]
-            for subset in get_subsets(
-                project_name,
-                asset_ids=[asset_doc["_id"]],
-                fields=["_id", "data.family", "data.families"],
-            )
-            if subset["data"].get("family") == "workfile"
-            # Legacy compatibility
-            or "workfile" in subset["data"].get("families", {})
-        ),
-        None,
-    )
     if not subset_id:
-        print("Subset id not found for asset '{}'.".format(asset_doc["name"]))
-        return
+        subset_id = get_subset_id(
+            project_name, asset_name, task_name, asset_doc
+        )
+        if not subset_id:
+            print(
+                "Subset id not found for asset '{}'.".format(asset_doc["name"])
+            )
+            return
 
     last_version_doc = get_last_version_by_subset_id(
         project_name, subset_id, fields=["_id"]
@@ -441,8 +428,6 @@ def download_last_published_workfile(
         )
         return
 
-    print(f"workfile rep: {workfile_representation}")
-
     local_site_id = get_local_site_id()
     sync_server.add_site(
         project_name,
@@ -458,36 +443,8 @@ def download_last_published_workfile(
     ):
         sleep(5)
 
-    if not last_workfile:
-        last_workfile = get_last_workfile(
-            get_workdir(
-                project_doc, asset_doc, task_name, host_name, anatomy=anatomy
-            ),
-            str(
-                anatomy.templates[
-                    get_workfile_template_key(
-                        task_name,
-                        host_name,
-                        project_name,
-                    )
-                ]["file"]
-            ),
-            get_template_data(
-                project_doc,
-                asset_doc=asset_doc,
-                task_name=task_name,
-                host_name=host_name,
-            ),
-            ModulesManager()
-            .get_host_module(host_name)
-            .get_workfile_extensions(),
-            full_path=True,
-        )
-    if os.path.exists(last_workfile):
-        last_workfile = version_up(last_workfile)
-
-    shutil.copy(
-        get_last_published_workfile_path(
+    if not last_published_workfile_path:
+        last_published_workfile_path = get_last_published_workfile_path(
             host_name,
             project_name,
             asset_name,
@@ -497,8 +454,24 @@ def download_last_published_workfile(
             workfile_representation=workfile_representation,
             subset_id=subset_id,
             last_version_doc=last_version_doc,
-        ),
-        last_workfile,
+        )
+
+    workfile_data = get_template_data_with_names(
+        project_name, asset_name, task_name, host_name
+    )
+    print(f"ext: {os.path.splitext(last_published_workfile_path)[-1]}")
+    workfile_data["version"] = last_version_doc["name"] + 1
+    workfile_data["ext"] = os.path.splitext(last_published_workfile_path)[-1]
+    template_key = get_workfile_template_key(
+        task_name, host_name, project_name, get_project_settings(project_name)
+    )
+    anatomy_result = anatomy.format(workfile_data)
+    local_workfile_path = anatomy_result[template_key]["path"]
+
+    # WARNING: there are TWO dots instead of one for the extension
+    shutil.copy(
+        last_published_workfile_path,
+        local_workfile_path,
     )
 
     return last_workfile
