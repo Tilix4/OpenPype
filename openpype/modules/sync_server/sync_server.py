@@ -275,13 +275,9 @@ def _get_configured_sites_from_setting(module, project_name, project_setting):
 def get_last_published_workfile_path(
     host_name: str,
     project_name: str,
-    asset_name: str,
     task_name: str,
+    workfile_representation: dict,
     anatomy: Anatomy = None,
-    asset_doc: dict = None,
-    workfile_representation: dict = None,
-    subset_id: str = None,
-    last_version_doc: dict = None,
 ) -> str:
     """Returns last published workfile path.
     Optional arguments can be filled as an optimisation.
@@ -304,58 +300,14 @@ def get_last_published_workfile_path(
     """
     if not anatomy:
         anatomy = Anatomy(project_name)
-    if not asset_doc:
-        asset_doc = get_asset_by_name(project_name, asset_name)
-
-    if not subset_id:
-        # Get subset id
-        subset_id = next(
-            (
-                subset["_id"]
-                for subset in get_subsets(
-                    project_name,
-                    asset_ids=[asset_doc["_id"]],
-                    fields=["_id", "data.family", "data.families"],
-                )
-                if subset["data"].get("family") == "workfile"
-                # Legacy compatibility
-                or "workfile" in subset["data"].get("families", {})
-            ),
-            None,
-        )
-        if not subset_id:
-            print(
-                "Subset id not found for asset '{}'.".format(asset_doc["name"])
-            )
-            return
-
-    if not last_version_doc:
-        # Get workfile representation
-        last_version_doc = get_last_version_by_subset_id(
-            project_name, subset_id, fields=["_id"]
-        )
-        if not last_version_doc:
-            print("Subset does not have any version.")
-            return
 
     if not workfile_representation:
-        workfile_representation = next(
-            (
-                representation
-                for representation in get_representations(
-                    project_name, version_ids=[last_version_doc["_id"]]
-                )
-                if representation["context"]["task"]["name"] == task_name
-            ),
-            None,
-        )
-        if not workfile_representation:
-            print(
-                "No published workfilefor task '{}' and host '{}'.".format(
-                    task_name, host_name
-                )
+        print(
+            "No published workfilefor task '{}' and host '{}'.".format(
+                task_name, host_name
             )
-            return
+        )
+        return
 
     return get_representation_path_with_anatomy(
         workfile_representation, anatomy
@@ -367,10 +319,12 @@ def download_last_published_workfile(
     project_name: str,
     asset_name: str,
     task_name: str,
-    last_published_workfile_path: str = None,
+    last_published_workfile_path: str,
+    workfile_representation: dict,
+    subset_id: str,
+    last_version_doc: dict,
     anatomy: Anatomy = None,
     asset_doc: dict = None,
-    subset_id: str = None,
 ) -> str:
     """Downloads the last pusblished workfile, and returns its path.
 
@@ -386,40 +340,23 @@ def download_last_published_workfile(
         str: _description_
     """
     # TODO: Add availability check
-    anatomy = Anatomy(project_name)
-    project_doc = get_project(project_name)
-    asset_doc = get_asset_by_name(project_name, asset_name)
+    if not anatomy:
+        anatomy = Anatomy(project_name)
 
-    sync_server = ModulesManager().modules_by_name.get("sync_server")
+    if not asset_doc:
+        asset_doc = get_asset_by_name(project_name, asset_name)
+
+    modules_manager = ModulesManager()
+
+    sync_server = modules_manager.modules_by_name.get("sync_server")
     if not sync_server or not sync_server.enabled:
         print("Sync server module is disabled or unavailable.")
         return
 
-    # Get subset id
     if not subset_id:
-        subset_id = get_subset_id(
-            project_name, asset_name, task_name, asset_doc
-        )
-        if not subset_id:
-            print(
-                "Subset id not found for asset '{}'.".format(asset_doc["name"])
-            )
-            return
+        print("Subset id not found for asset '{}'.".format(asset_doc["name"]))
+        return
 
-    last_version_doc = get_last_version_by_subset_id(
-        project_name, subset_id, fields=["_id"]
-    )
-
-    workfile_representation = next(
-        (
-            representation
-            for representation in get_representations(
-                project_name, version_ids=[last_version_doc["_id"]]
-            )
-            if representation["context"]["task"]["name"] == task_name
-        ),
-        None,
-    )
     if not workfile_representation:
         print(
             "No published workfilefor task '{}' and host '{}'.".format(
@@ -443,7 +380,7 @@ def download_last_published_workfile(
     ):
         sleep(5)
 
-    if not last_published_workfile_path:
+    if not last_published_workfile_path:  # Check args
         last_published_workfile_path = get_last_published_workfile_path(
             host_name,
             project_name,
@@ -459,22 +396,58 @@ def download_last_published_workfile(
     workfile_data = get_template_data_with_names(
         project_name, asset_name, task_name, host_name
     )
-    print(f"ext: {os.path.splitext(last_published_workfile_path)[-1]}")
     workfile_data["version"] = last_version_doc["name"] + 1
-    workfile_data["ext"] = os.path.splitext(last_published_workfile_path)[-1]
+    workfile_data["ext"] = last_published_workfile_path.split(".")[-1]
+    print(f"workfile ext: {workfile_data['ext']}")
     template_key = get_workfile_template_key(
         task_name, host_name, project_name, get_project_settings(project_name)
     )
     anatomy_result = anatomy.format(workfile_data)
     local_workfile_path = anatomy_result[template_key]["path"]
 
-    # WARNING: there are TWO dots instead of one for the extension
     shutil.copy(
         last_published_workfile_path,
         local_workfile_path,
     )
 
-    return last_workfile
+    return local_workfile_path
+
+
+# /!\ Might be out of place!
+def get_subset_id(
+    project_name, asset_name, task_name, asset_doc
+):  # asset_name only for debug
+    filtered_subsets = [
+        subset
+        for subset in get_subsets(
+            project_name,
+            asset_ids=[asset_doc["_id"]],
+            fields=["_id", "name", "data.family", "data.families"],
+        )
+        if (
+            subset["data"].get("family") == "workfile"
+            # Legacy compatibility
+            or "workfile" in subset["data"].get("families", {})
+        )
+    ]
+    if not filtered_subsets:
+        print(
+            "Not any subset for asset '{}' with id '{}'.".format(
+                asset_name, asset_doc["_id"]
+            )
+        )
+        return
+
+    # Matching subset which has task name in its name
+    subset_id = None
+    low_task_name = task_name.lower()
+    if len(filtered_subsets) > 1:
+        for subset in filtered_subsets:
+            if low_task_name in subset["name"].lower():
+                subset_id = subset["_id"]
+                break
+
+    return subset_id
 
 
 class SyncServerThread(threading.Thread):

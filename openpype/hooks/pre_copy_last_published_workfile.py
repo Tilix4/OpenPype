@@ -16,6 +16,7 @@ from openpype.pipeline.workfile.path_resolving import get_workfile_template_key
 from openpype.settings.lib import get_project_settings
 from openpype.modules.sync_server.sync_server import (
     download_last_published_workfile,
+    get_subset_id,
 )
 
 
@@ -96,11 +97,93 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
             return
 
         self.log.info("Trying to fetch last published workfile...")
+
+        project_doc = self.data.get("project_doc")
+        asset_doc = self.data.get("asset_doc")
+        anatomy = self.data.get("anatomy")
+
+        # Getting subset ID
+        filtered_subsets = [
+            subset
+            for subset in get_subsets(
+                project_name,
+                asset_ids=[asset_doc["_id"]],
+                fields=["_id", "name", "data.family", "data.families"],
+            )
+            if (
+                subset["data"].get("family") == "workfile"
+                # Legacy compatibility
+                or "workfile" in subset["data"].get("families", {})
+            )
+        ]
+        if not filtered_subsets:
+            self.log.debug(
+                "No any subset for asset '{}' with id '{}'.".format(
+                    asset_name, asset_doc["_id"]
+                )
+            )
+            return
+
+        # Matching subset which has task name in its name
+        subset_id = None
+        low_task_name = task_name.lower()
+        if len(filtered_subsets) > 1:
+            for subset in filtered_subsets:
+                if low_task_name in subset["name"].lower():
+                    subset_id = subset["_id"]
+                    break
+        if subset_id is None:
+            self.log.debug(
+                "No any matched subset for task '{}' of '{}'.".format(
+                    low_task_name, asset_name
+                )
+            )
+            return
+
+        # Getting workfile representation
+        last_version_doc = get_last_version_by_subset_id(
+            project_name, subset_id, fields=["_id", "name"]
+        )
+        if not last_version_doc:
+            self.log.debug("Subset does not have any versions")
+            return
+
+        workfile_representation = next(
+            (
+                representation
+                for representation in get_representations(
+                    project_name, version_ids=[last_version_doc["_id"]]
+                )
+                if representation["context"]["task"]["name"] == task_name
+            ),
+            None,
+        )
+        if not workfile_representation:
+            self.log.debug(
+                'No published workfile for task "{}" and host "{}".'.format(
+                    task_name, host_name
+                )
+            )
+            return
+
+        published_workfile_path = get_last_published_workfile_path(
+            host_name,
+            project_name,
+            task_name,
+            workfile_representation,
+            anatomy=anatomy,
+        )
+
+        # Copy file and substitute path
         self.data["last_workfile_path"] = download_last_published_workfile(
             host_name,
             project_name,
             self.data["asset_name"],
             task_name,
+            published_workfile_path,
+            workfile_representation,
+            subset_id,
+            last_version_doc,
             anatomy=anatomy,
             asset_doc=asset_doc,
         )
