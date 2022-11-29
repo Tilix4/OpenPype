@@ -21,10 +21,7 @@ def _prepare_fields(fields, required_fields=None):
     if not fields:
         return None
 
-    output = {
-        field: True
-        for field in fields
-    }
+    output = {field: True for field in fields}
     if "_id" not in output:
         output["_id"] = True
 
@@ -178,7 +175,7 @@ def _get_assets(
     parent_ids=None,
     standard=True,
     archived=False,
-    fields=None
+    fields=None,
 ):
     """Assets for specified project by passed filters.
 
@@ -245,7 +242,7 @@ def get_assets(
     asset_names=None,
     parent_ids=None,
     archived=False,
-    fields=None
+    fields=None,
 ):
     """Assets for specified project by passed filters.
 
@@ -276,7 +273,7 @@ def get_assets(
         parent_ids,
         True,
         archived,
-        fields
+        fields,
     )
 
 
@@ -285,7 +282,7 @@ def get_archived_assets(
     asset_ids=None,
     asset_names=None,
     parent_ids=None,
-    fields=None
+    fields=None,
 ):
     """Archived assets for specified project by passed filters.
 
@@ -325,9 +322,7 @@ def get_asset_ids_with_subsets(project_name, asset_ids=None):
         Iterable[ObjectId]: Asset ids that have existing subsets.
     """
 
-    subset_query = {
-        "type": "subset"
-    }
+    subset_query = {"type": "subset"}
     if asset_ids is not None:
         asset_ids = convert_ids(asset_ids)
         if not asset_ids:
@@ -335,17 +330,12 @@ def get_asset_ids_with_subsets(project_name, asset_ids=None):
         subset_query["parent"] = {"$in": asset_ids}
 
     conn = get_project_connection(project_name)
-    result = conn.aggregate([
-        {
-            "$match": subset_query
-        },
-        {
-            "$group": {
-                "_id": "$parent",
-                "count": {"$sum": 1}
-            }
-        }
-    ])
+    result = conn.aggregate(
+        [
+            {"$match": subset_query},
+            {"$group": {"_id": "$parent", "count": {"$sum": 1}}},
+        ]
+    )
     asset_ids_with_subsets = []
     for item in result:
         asset_id = item["_id"]
@@ -400,11 +390,7 @@ def get_subset_by_name(project_name, subset_name, asset_id, fields=None):
     if not asset_id:
         return None
 
-    query_filters = {
-        "type": "subset",
-        "name": subset_name,
-        "parent": asset_id
-    }
+    query_filters = {"type": "subset", "name": subset_name, "parent": asset_id}
     conn = get_project_connection(project_name)
     return conn.find_one(query_filters, _prepare_fields(fields))
 
@@ -416,7 +402,7 @@ def get_subsets(
     asset_ids=None,
     names_by_asset_ids=None,
     archived=False,
-    fields=None
+    fields=None,
 ):
     """Subset entities data from one project filtered by entered filters.
 
@@ -470,16 +456,67 @@ def get_subsets(
         or_query = []
         for asset_id, names in names_by_asset_ids.items():
             if asset_id and names:
-                or_query.append({
-                    "parent": convert_id(asset_id),
-                    "name": {"$in": list(names)}
-                })
+                or_query.append(
+                    {
+                        "parent": convert_id(asset_id),
+                        "name": {"$in": list(names)},
+                    }
+                )
         if not or_query:
             return []
         query_filter["$or"] = or_query
 
     conn = get_project_connection(project_name)
     return conn.find(query_filter, _prepare_fields(fields))
+
+
+def match_subset_id(
+    project_name: str, task_name: str, family: str, asset_doc: dict
+) -> str:
+    """Returns subset ID for given project, task and family.
+
+    Args:
+        project_name (str): Project_name.
+        task_name (str): Task name.
+        family (str): Family.
+        asset_doc (dict): Asset doc.
+
+    Returns:
+        str: Subset ID.
+    """
+
+    # Getting subsets of the correct family
+    filtered_subsets = [
+        subset
+        for subset in get_subsets(
+            project_name,
+            asset_ids=[asset_doc["_id"]],
+            fields=["_id", "name", "data.family", "data.families"],
+        )
+        if (
+            subset["data"].get("family") == family
+            # Legacy compatibility
+            or family in subset["data"].get("families", {})
+        )
+    ]
+    if not filtered_subsets:
+        print(
+            "No any subset for asset '{}' with id '{}'.".format(
+                asset_doc("name"), asset_doc["_id"]
+            )
+        )
+        return
+
+    # Matching subset which has task name in its name
+    subset_id = None
+    low_task_name = task_name.lower()
+    if len(filtered_subsets) > 1:
+        for subset in filtered_subsets:
+            if low_task_name in subset["name"].lower():
+                subset_id = subset["_id"]
+                break
+
+    return subset_id
 
 
 def get_subset_families(project_name, subset_ids=None):
@@ -494,25 +531,31 @@ def get_subset_families(project_name, subset_ids=None):
          set[str]: Main families of matching subsets.
     """
 
-    subset_filter = {
-        "type": "subset"
-    }
+    subset_filter = {"type": "subset"}
     if subset_ids is not None:
         if not subset_ids:
             return set()
         subset_filter["_id"] = {"$in": list(subset_ids)}
 
     conn = get_project_connection(project_name)
-    result = list(conn.aggregate([
-        {"$match": subset_filter},
-        {"$project": {
-            "family": {"$arrayElemAt": ["$data.families", 0]}
-        }},
-        {"$group": {
-            "_id": "family_group",
-            "families": {"$addToSet": "$family"}
-        }}
-    ]))
+    result = list(
+        conn.aggregate(
+            [
+                {"$match": subset_filter},
+                {
+                    "$project": {
+                        "family": {"$arrayElemAt": ["$data.families", 0]}
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": "family_group",
+                        "families": {"$addToSet": "$family"},
+                    }
+                },
+            ]
+        )
+    )
     if result:
         return set(result[0]["families"])
     return set()
@@ -538,7 +581,7 @@ def get_version_by_id(project_name, version_id, fields=None):
 
     query_filter = {
         "type": {"$in": ["version", "hero_version"]},
-        "_id": version_id
+        "_id": version_id,
     }
     conn = get_project_connection(project_name)
     return conn.find_one(query_filter, _prepare_fields(fields))
@@ -564,11 +607,7 @@ def get_version_by_name(project_name, version, subset_id, fields=None):
         return None
 
     conn = get_project_connection(project_name)
-    query_filter = {
-        "type": "version",
-        "parent": subset_id,
-        "name": version
-    }
+    query_filter = {"type": "version", "parent": subset_id, "name": version}
     return conn.find_one(query_filter, _prepare_fields(fields))
 
 
@@ -615,7 +654,7 @@ def _get_versions(
     versions=None,
     standard=True,
     hero=False,
-    fields=None
+    fields=None,
 ):
     version_types = []
     if standard:
@@ -664,7 +703,7 @@ def get_versions(
     subset_ids=None,
     versions=None,
     hero=False,
-    fields=None
+    fields=None,
 ):
     """Version entities data from one project filtered by entered filters.
 
@@ -693,7 +732,7 @@ def get_versions(
         versions,
         standard=True,
         hero=hero,
-        fields=fields
+        fields=fields,
     )
 
 
@@ -716,13 +755,15 @@ def get_hero_version_by_subset_id(project_name, subset_id, fields=None):
     if not subset_id:
         return None
 
-    versions = list(_get_versions(
-        project_name,
-        subset_ids=[subset_id],
-        standard=False,
-        hero=True,
-        fields=fields
-    ))
+    versions = list(
+        _get_versions(
+            project_name,
+            subset_ids=[subset_id],
+            standard=False,
+            hero=True,
+            fields=fields,
+        )
+    )
     if versions:
         return versions[0]
     return None
@@ -746,23 +787,22 @@ def get_hero_version_by_id(project_name, version_id, fields=None):
     if not version_id:
         return None
 
-    versions = list(_get_versions(
-        project_name,
-        version_ids=[version_id],
-        standard=False,
-        hero=True,
-        fields=fields
-    ))
+    versions = list(
+        _get_versions(
+            project_name,
+            version_ids=[version_id],
+            standard=False,
+            hero=True,
+            fields=fields,
+        )
+    )
     if versions:
         return versions[0]
     return None
 
 
 def get_hero_versions(
-    project_name,
-    subset_ids=None,
-    version_ids=None,
-    fields=None
+    project_name, subset_ids=None, version_ids=None, fields=None
 ):
     """Hero version entities data from one project filtered by entered filters.
 
@@ -785,7 +825,7 @@ def get_hero_versions(
         version_ids,
         standard=False,
         hero=True,
-        fields=fields
+        fields=fields,
     )
 
 
@@ -814,10 +854,7 @@ def get_output_link_versions(project_name, version_id, fields=None):
 
     conn = get_project_connection(project_name)
     # Does make sense to look for hero versions?
-    query_filter = {
-        "type": "version",
-        "data.inputLinks.id": version_id
-    }
+    query_filter = {"type": "version", "data.inputLinks.id": version_id}
     return conn.find(query_filter, _prepare_fields(fields))
 
 
@@ -857,24 +894,18 @@ def get_last_versions(project_name, subset_ids, fields=None):
                 fields_s.remove(field)
         limit_query = len(fields_s) == 0
 
-    group_item = {
-        "_id": "$parent",
-        "_version_id": {"$last": "$_id"}
-    }
+    group_item = {"_id": "$parent", "_version_id": {"$last": "$_id"}}
     # Add name if name is needed (only for limit query)
     if name_needed:
         group_item["name"] = {"$last": "$name"}
 
     aggregation_pipeline = [
         # Find all versions of those subsets
-        {"$match": {
-            "type": "version",
-            "parent": {"$in": subset_ids}
-        }},
+        {"$match": {"type": "version", "parent": {"$in": subset_ids}}},
         # Sorting versions all together
         {"$sort": {"name": 1}},
         # Group them by "parent", but only take the last
-        {"$group": group_item}
+        {"$group": group_item},
     ]
 
     conn = get_project_connection(project_name)
@@ -889,10 +920,7 @@ def get_last_versions(project_name, subset_ids, fields=None):
             output[subset_id] = item_data
         return output
 
-    version_ids = [
-        doc["_version_id"]
-        for doc in aggregate_result
-    ]
+    version_ids = [doc["_version_id"] for doc in aggregate_result]
 
     fields = _prepare_fields(fields, ["parent"])
 
@@ -900,10 +928,7 @@ def get_last_versions(project_name, subset_ids, fields=None):
         project_name, version_ids=version_ids, fields=fields
     )
 
-    return {
-        version_doc["parent"]: version_doc
-        for version_doc in version_docs
-    }
+    return {version_doc["parent"]: version_doc for version_doc in version_docs}
 
 
 def get_last_version_by_subset_id(project_name, subset_id, fields=None):
@@ -989,9 +1014,7 @@ def get_representation_by_id(project_name, representation_id, fields=None):
         return None
 
     repre_types = ["representation", "archived_representation"]
-    query_filter = {
-        "type": {"$in": repre_types}
-    }
+    query_filter = {"type": {"$in": repre_types}}
     if representation_id is not None:
         query_filter["_id"] = convert_id(representation_id)
 
@@ -1025,7 +1048,7 @@ def get_representation_by_name(
     query_filter = {
         "type": {"$in": repre_types},
         "name": representation_name,
-        "parent": version_id
+        "parent": version_id,
     }
 
     conn = get_project_connection(project_name)
@@ -1084,6 +1107,31 @@ def _regex_filters(filters):
     return output
 
 
+def get_representation(
+    project_name: str, task_name: str, version_doc: dict
+) -> str:
+    """Returns representation for given project and task, and version.
+
+    Args:
+        project_name (str): Project name.
+        task_name (str): Task name.
+        version_doc (dict): Version doc.
+
+    Returns:
+        str: Representation.
+    """
+    return next(
+        (
+            representation
+            for representation in get_representations(
+                project_name, version_ids=[version_doc["_id"]]
+            )
+            if representation["context"]["task"]["name"] == task_name
+        ),
+        None,
+    )
+
+
 def _get_representations(
     project_name,
     representation_ids,
@@ -1093,7 +1141,7 @@ def _get_representations(
     names_by_version_ids,
     standard,
     archived,
-    fields
+    fields,
 ):
     default_output = []
     repre_types = []
@@ -1132,10 +1180,12 @@ def _get_representations(
         or_query = []
         for version_id, names in names_by_version_ids.items():
             if version_id and names:
-                or_query.append({
-                    "parent": convert_id(version_id),
-                    "name": {"$in": list(names)}
-                })
+                or_query.append(
+                    {
+                        "parent": convert_id(version_id),
+                        "name": {"$in": list(names)},
+                    }
+                )
         if not or_query:
             return default_output
         or_queries.append(or_query)
@@ -1182,7 +1232,7 @@ def get_representations(
     names_by_version_ids=None,
     archived=False,
     standard=True,
-    fields=None
+    fields=None,
 ):
     """Representaion entities data from one project filtered by filters.
 
@@ -1217,7 +1267,7 @@ def get_representations(
         names_by_version_ids=names_by_version_ids,
         standard=True,
         archived=archived,
-        fields=fields
+        fields=fields,
     )
 
 
@@ -1228,7 +1278,7 @@ def get_archived_representations(
     version_ids=None,
     context_filters=None,
     names_by_version_ids=None,
-    fields=None
+    fields=None,
 ):
     """Archived representaion entities data from project with applied filters.
 
@@ -1262,7 +1312,7 @@ def get_archived_representations(
         names_by_version_ids=names_by_version_ids,
         standard=False,
         archived=True,
-        fields=fields
+        fields=fields,
     )
 
 
@@ -1294,9 +1344,7 @@ def get_representations_parents(project_name, representations):
         repre_docs_by_version_id[version_id].append(repre_doc)
 
     version_docs = get_versions(
-        project_name,
-        version_ids=repre_docs_by_version_id.keys(),
-        hero=True
+        project_name, version_ids=repre_docs_by_version_id.keys(), hero=True
     )
     for version_doc in version_docs:
         version_id = version_doc["_id"]
@@ -1317,8 +1365,7 @@ def get_representations_parents(project_name, representations):
         project_name, asset_ids=subset_docs_by_asset_id.keys()
     )
     asset_docs_by_id = {
-        asset_doc["_id"]: asset_doc
-        for asset_doc in asset_docs
+        asset_doc["_id"]: asset_doc for asset_doc in asset_docs
     }
 
     project_doc = get_project(project_name)
@@ -1337,7 +1384,10 @@ def get_representations_parents(project_name, representations):
         for repre_doc in repre_docs:
             repre_id = repre_doc["_id"]
             output[repre_id] = (
-                version_doc, subset_doc, asset_doc, project_doc
+                version_doc,
+                subset_doc,
+                asset_doc,
+                project_doc,
             )
     return output
 
@@ -1414,10 +1464,7 @@ def get_thumbnails(project_name, thumbnail_ids, fields=None):
 
     if not thumbnail_ids:
         return []
-    query_filter = {
-        "type": "thumbnail",
-        "_id": {"$in": thumbnail_ids}
-    }
+    query_filter = {"type": "thumbnail", "_id": {"$in": thumbnail_ids}}
     conn = get_project_connection(project_name)
     return conn.find(query_filter, _prepare_fields(fields))
 
@@ -1468,7 +1515,7 @@ def get_workfile_info(
         "type": "workfile",
         "parent": convert_id(asset_id),
         "task_name": task_name,
-        "filename": filename
+        "filename": filename,
     }
     conn = get_project_connection(project_name)
     return conn.find_one(query_filter, _prepare_fields(fields))
