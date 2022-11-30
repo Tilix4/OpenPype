@@ -9,6 +9,7 @@ from openpype.lib import PreLaunchHook
 from openpype.lib.profiles_filtering import filter_profiles
 from openpype.settings.lib import get_project_settings
 from openpype.modules.sync_server.sync_server import (
+    get_last_published_workfile_path,
     download_last_published_workfile,
 )
 
@@ -140,7 +141,7 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
         self.data["last_workfile_path"] = download_last_published_workfile(
             host_name,
             project_name,
-            self.data["asset_name"],
+            asset_name,
             task_name,
             published_workfile_path,
             workfile_representation,

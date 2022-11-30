@@ -8,6 +8,7 @@ from time import sleep
 from concurrent.futures._base import CancelledError
 
 from .providers import lib
+from openpype.client.entity_links import get_linked_representation_id
 from openpype.lib import Logger
 from openpype.lib.local_settings import get_local_site_id
 from openpype.modules.base import ModulesManager
@@ -54,7 +55,6 @@ async def upload(
             have multiple sites (different accounts, credentials)
         tree (dictionary): injected memory structure for performance
         preset (dictionary): site config ('credentials_url', 'root'...)
-
     """
     # create ids sequentially, upload file in parallel later
     with module.lock:
@@ -383,6 +383,12 @@ def download_last_published_workfile(
         reset_timer=True,
     )
 
+    representation_ids = {workfile_representation["_id"]}
+    representation_ids.update(
+        get_linked_representation_id(
+            project_name, repre_id=workfile_representation["_id"]
+        )
+    )
     for repre_id in representation_ids:
         sync_server.add_site(
             project_name,
