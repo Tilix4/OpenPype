@@ -2,7 +2,7 @@ import os
 from openpype.client.entities import (
     get_last_version_by_subset_id,
     match_subset_id,
-    get_representation_with_task,
+    get_representation_by_task,
 )
 
 from openpype.lib import PreLaunchHook
@@ -115,7 +115,7 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
             self.log.debug("Subset does not have any versions")
             return
 
-        workfile_representation = get_representation_with_task(
+        workfile_representation = get_representation_by_task(
             project_name,
             task_name,
             last_version_doc,

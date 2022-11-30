@@ -29,11 +29,14 @@ async def upload(module, project_name, file, representation, provider_name,
         Source url is taken from 'file' portion, where {root} placeholder
         is replaced by 'representation.Context.root'
         Provider could be one of implemented in provider.py.
+
         Updates MongoDB, fills in id of file from provider (ie. file_id
         from GDrive), 'created_dt' - time of upload
+
         'provider_name' doesn't have to match to 'site_name', single
         provider (GDrive) might have multiple sites ('projectA',
         'projectB')
+
     Args:
         module(SyncServerModule): object to run SyncServerModule API
         project_name (str): source db
@@ -44,6 +47,7 @@ async def upload(module, project_name, file, representation, provider_name,
             have multiple sites (different accounts, credentials)
         tree (dictionary): injected memory structure for performance
         preset (dictionary): site config ('credentials_url', 'root'...)
+
     """
     # create ids sequentially, upload file in parallel later
     with module.lock:
@@ -97,6 +101,7 @@ async def download(module, project_name, file, representation, provider_name,
                    remote_site_name, tree=None, preset=None):
     """
         Downloads file to local folder denoted in representation.Context.
+
     Args:
         module(SyncServerModule): object to run SyncServerModule API
         project_name (str): source
@@ -107,6 +112,7 @@ async def download(module, project_name, file, representation, provider_name,
             have multiple sites (different accounts, credentials)
         tree (dictionary): injected memory structure for performance
         preset (dictionary): site config ('credentials_url', 'root'...)
+
         Returns:
         (string) - 'name' of local file
     """
@@ -151,7 +157,9 @@ def resolve_paths(module, file_path, project_name,
     """
         Returns tuple of local and remote file paths with {root}
         placeholders replaced with proper values from Settings or Anatomy
+
         Ejected here because of Python 2 hosts (GDriveHandler is an issue)
+
         Args:
             module(SyncServerModule): object to run SyncServerModule API
             file_path(string): path with {root}
@@ -175,7 +183,9 @@ def resolve_paths(module, file_path, project_name,
 def site_is_working(module, project_name, site_name):
     """
         Confirm that 'site_name' is configured correctly for 'project_name'.
+
         Must be here as lib.factory access doesn't work in Python 2 hosts.
+
         Args:
             module (SyncServerModule)
             project_name(string):
@@ -192,6 +202,7 @@ def _get_configured_sites(module, project_name):
     """
         Loops through settings and looks for configured sites and checks
         its handlers for particular 'project_name'.
+
         Args:
             project_setting(dict): dictionary from Settings
             only_project_name(string, optional): only interested in
@@ -227,7 +238,8 @@ def _get_configured_sites_from_setting(module, project_name, project_setting):
             configured_sites[site_name] = True
 
     return configured_sites
-    
+
+
 def get_last_published_workfile_path(
     host_name: str,
     project_name: str,
@@ -236,14 +248,12 @@ def get_last_published_workfile_path(
     anatomy: Anatomy = None,
 ) -> str:
     """Returns last published workfile path.
-
     Args:
         host_name (str): Host name.
         project_name (str): Project name.
         task_name (str): Task name.
         workfile_representation (dict): Workfile representation.
         anatomy (Anatomy, optional): Anatomy. Defaults to None.
-
     Returns:
         str: Last published workfile path.
     """
@@ -276,7 +286,6 @@ def download_last_published_workfile(
     asset_doc: dict = None,
 ) -> str:
     """Downloads the last pusblished workfile, and returns its path.
-
     Args:
         host_name (str): Host name.
         project_name (str): Project name.
@@ -289,7 +298,6 @@ def download_last_published_workfile(
         last_version_doc (dict): Last version doc.
         anatomy (Anatomy, optional): Anatomy. Defaults to None.
         asset_doc (dict, optional): Asset doc. Defaults to None.
-
     Returns:
         str: New local workfile path.
     """
@@ -445,6 +453,7 @@ class SyncServerThread(threading.Thread):
                 - update representations - fills error messages for exceptions
                 - waits X seconds and repeat
         Returns:
+
         """
         while self.is_running and not self.module.is_paused():
             try:
