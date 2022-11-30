@@ -91,7 +91,6 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
 
         self.log.info("Trying to fetch last published workfile...")
 
-        project_doc = self.data.get("project_doc")
         asset_doc = self.data.get("asset_doc")
         anatomy = self.data.get("anatomy")
 
