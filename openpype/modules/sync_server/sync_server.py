@@ -330,7 +330,7 @@ def download_last_published_workfile(
         )
         return
 
-    # If represenation isn't available on remote site, then return.
+    # If representation isn't available on remote site, then return.
     if not sync_server.is_representation_on_site(
         project_name,
         workfile_representation["_id"],
