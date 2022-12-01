@@ -247,7 +247,7 @@ def get_last_published_workfile_path(
     workfile_representation: dict,
     anatomy: Anatomy = None,
 ) -> str:
-    """Returns last published workfile path.
+    """Get last published workfile path.
 
     Args:
         host_name (str): Host name.
@@ -265,7 +265,7 @@ def get_last_published_workfile_path(
 
     if not workfile_representation:
         print(
-            "No published workfilefor task '{}' and host '{}'.".format(
+            "No published workfile for task '{}' and host '{}'.".format(
                 task_name, host_name
             )
         )
