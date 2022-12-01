@@ -95,7 +95,7 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
         asset_doc = self.data.get("asset_doc")
         anatomy = self.data.get("anatomy")
 
-        # Getting subset ID
+        # Get subset ID
         subset_id = match_subset_id(
             project_name, task_name, "workfile", asset_doc
         )
@@ -107,7 +107,7 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
             )
             return
 
-        # Getting workfile representation
+        # Get workfile representation
         last_version_doc = get_last_version_by_subset_id(
             project_name, subset_id, fields=["_id", "name"]
         )

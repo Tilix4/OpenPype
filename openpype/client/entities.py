@@ -521,17 +521,19 @@ def get_subset_families(project_name, subset_ids=None):
 def match_subset_id(
     project_name: str, task_name: str, family: str, asset_doc: dict
 ) -> str:
-    """Returns subset ID for given project, task and family.
+    """Match subset ID for given project, task and family.
+
     Args:
         project_name (str): Project_name.
         task_name (str): Task name.
         family (str): Family.
         asset_doc (dict): Asset doc.
+
     Returns:
         str: Subset ID.
     """
 
-    # Getting subsets of the correct family
+    # Get subsets of the correct family
     filtered_subsets = [
         subset
         for subset in get_subsets(
@@ -553,16 +555,14 @@ def match_subset_id(
         )
         return
 
-    # Matching subset which has task name in its name
+    # Match subset which has `task_name` in its name
     subset_id = None
     low_task_name = task_name.lower()
     if len(filtered_subsets) > 1:
         for subset in filtered_subsets:
             if low_task_name in subset["name"].lower():
                 subset_id = subset["_id"]
-                break
-
-    return subset_id
+                return subset_id
 
 
 def get_version_by_id(project_name, version_id, fields=None):
@@ -1082,11 +1082,13 @@ def get_representation_by_name(
 def get_representation_by_task(
     project_name: str, task_name: str, version_doc: dict
 ) -> str:
-    """Returns representation for given project and task, and version.
+    """Return representation for given project and task, and version.
+
     Args:
         project_name (str): Project name.
         task_name (str): Task name.
         version_doc (dict): Version doc.
+
     Returns:
         str: Representation.
     """

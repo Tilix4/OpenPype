@@ -248,12 +248,15 @@ def get_last_published_workfile_path(
     anatomy: Anatomy = None,
 ) -> str:
     """Returns last published workfile path.
+
     Args:
         host_name (str): Host name.
         project_name (str): Project name.
         task_name (str): Task name.
         workfile_representation (dict): Workfile representation.
-        anatomy (Anatomy, optional): Anatomy. Defaults to None.
+        anatomy (Anatomy, optional): Anatomy (Used for optimization).
+            Defaults to None.
+
     Returns:
         str: Last published workfile path.
     """
@@ -285,7 +288,8 @@ def download_last_published_workfile(
     anatomy: Anatomy = None,
     asset_doc: dict = None,
 ) -> str:
-    """Downloads the last pusblished workfile, and returns its path.
+    """Download the last pusblished workfile, and returns its path.
+
     Args:
         host_name (str): Host name.
         project_name (str): Project name.
@@ -296,8 +300,11 @@ def download_last_published_workfile(
         workfile_representation (dict): Workfile representation.
         subset_id (str): Subset ID.
         last_version_doc (dict): Last version doc.
-        anatomy (Anatomy, optional): Anatomy. Defaults to None.
-        asset_doc (dict, optional): Asset doc. Defaults to None.
+        anatomy (Anatomy, optional): Anatomy (Used for optimization).
+            Defaults to None.
+        asset_doc (dict, optional): Asset doc (Used for optimization).
+            Defaults to None.
+
     Returns:
         str: New local workfile path.
     """
@@ -308,7 +315,7 @@ def download_last_published_workfile(
     if not asset_doc:
         asset_doc = get_asset_by_name(project_name, asset_name)
 
-    # Getting sync server module
+    # Get sync server module
     sync_server = ModulesManager().modules_by_name.get("sync_server")
     if not sync_server or not sync_server.enabled:
         print("Sync server module is disabled or unavailable.")
@@ -343,16 +350,10 @@ def download_last_published_workfile(
         )
         return
 
+    # Get local site
     local_site_id = get_local_site_id()
-    sync_server.add_site(
-        project_name,
-        workfile_representation["_id"],
-        local_site_id,
-        force=True,
-        priority=99,
-        reset_timer=True,
-    )
 
+    # Add workfile representation to local site
     representation_ids = {workfile_representation["_id"]}
     representation_ids.update(
         get_linked_representation_id(
@@ -384,7 +385,7 @@ def download_last_published_workfile(
             anatomy=anatomy,
         )
 
-    # Getting workfile data
+    # Get workfile data
     workfile_data = get_template_data_with_names(
         project_name, asset_name, task_name, host_name
     )
