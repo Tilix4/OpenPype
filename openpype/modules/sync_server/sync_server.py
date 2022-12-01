@@ -288,7 +288,7 @@ def download_last_published_workfile(
     anatomy: Anatomy = None,
     asset_doc: dict = None,
 ) -> str:
-    """Download the last pusblished workfile, and return its path.
+    """Download the last published workfile, and return its path.
 
     Args:
         host_name (str): Host name.
