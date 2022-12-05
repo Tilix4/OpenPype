@@ -13,6 +13,9 @@ import pyblish.api
 
 from openpype.client import get_asset_by_name
 from openpype.settings import get_project_settings
+from openpype.hosts.blender.utility_scripts.is_workfile_out_of_date import (
+    is_work_file_out_of_date,
+)
 from openpype.pipeline import (
     legacy_io,
     register_loader_plugin_path,
@@ -138,11 +141,18 @@ def set_use_file_compression():
 def on_new():
     set_start_end_frames()
     set_use_file_compression()
+    bpy.types.WindowManager.is_workfile_out_of_date = bpy.props.BoolProperty(
+        name="Is Workfile Out Of Date",
+    )
 
 
 def on_open():
     set_start_end_frames()
     set_use_file_compression()
+    if is_work_file_out_of_date():
+        bpy.context.window_manager.is_workfile_out_of_date = True
+        bpy.ops.wm.workfile_out_of_date("INVOKE_DEFAULT")
+
 
 
 @bpy.app.handlers.persistent
