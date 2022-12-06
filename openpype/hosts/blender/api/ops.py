@@ -1229,7 +1229,9 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
         #                'Reset Resolution'?
         layout.separator()
         layout.operator(BuildWorkFile.bl_idname, text="Build First Workfile")
-        layout.operator(WM_OT_DownloadLastWorkfile.bl_idname, text="Update Workfile")
+        layout.operator(
+            WM_OT_DownloadLastWorkfile.bl_idname, text="Update Workfile"
+        )
 
 
 def draw_avalon_menu(self, context):
