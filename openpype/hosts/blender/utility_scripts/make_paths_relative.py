@@ -11,8 +11,11 @@ if __name__ == "__main__":
         f"Blend file | All paths converted to relative: {bpy.data.filepath}"
     )
     # Resolve path from source filepath with the relative filepath
-    # TODO make it a common list
-    datablocks_with_filepath = list(bpy.data.libraries) + list(bpy.data.images)
+    datablocks_with_filepath = [
+        datablock
+        for datablock in list(bpy.data.libraries) + list(bpy.data.images)
+        if not datablock.is_library_indirect
+    ]
     for datablock in datablocks_with_filepath:
         try:
             datablock.filepath = bpy.path.relpath(
