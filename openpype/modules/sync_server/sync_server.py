@@ -1,5 +1,6 @@
 """Python 3 only implementation."""
 import os
+import re
 import shutil
 import asyncio
 import threading
@@ -15,9 +16,12 @@ from openpype.modules.base import ModulesManager
 from openpype.pipeline import Anatomy
 from openpype.pipeline.template_data import get_template_data_with_names
 from openpype.pipeline.load.utils import get_representation_path_with_anatomy
-from openpype.pipeline.workfile.path_resolving import get_workfile_template_key
+from openpype.pipeline.workfile.path_resolving import (
+    get_workfile_template_key,
+    get_workdir,
+)
 from openpype.settings.lib import get_project_settings
-from openpype.client.entities import get_asset_by_name
+from openpype.client.entities import get_asset_by_name, get_project
 
 from .utils import SyncStatus, ResumableError
 
@@ -389,12 +393,45 @@ def download_last_published_workfile(
     workfile_data = get_template_data_with_names(
         project_name, asset_name, task_name, host_name
     )
-    workfile_data["version"] = last_version_doc["name"] + 1
-    workfile_data["ext"] = last_published_workfile_path.split(".")[-1]
 
+    extension = last_published_workfile_path.split(".")[-1]
+
+    project_settings = get_project_settings(project_name)
     template_key = get_workfile_template_key(
-        task_name, host_name, project_name, get_project_settings(project_name)
+        task_name, host_name, project_name, project_settings
     )
+
+    last_local_workfile_version = None
+    for filename in sorted(
+        os.listdir(
+            get_workdir(
+                get_project(project_name),
+                asset_doc,
+                task_name,
+                host_name,
+                anatomy=anatomy,
+                template_key=template_key,
+                project_settings=project_settings,
+            )
+        ),
+        reverse=True,
+    ):
+        if filename.endswith(extension):
+            match = re.search(
+                r"\d{{{}}}".format(anatomy.templates[template_key]["version_padding"]),
+                filename,
+            )
+            if match:
+                last_local_workfile_version = int(match.group(0))
+                break
+
+    workfile_data["version"] = (
+        last_local_workfile_version + 1
+        if last_local_workfile_version > last_version_doc["name"]
+        else last_version_doc["name"] + 1
+    )
+    workfile_data["ext"] = extension
+
     anatomy_result = anatomy.format(workfile_data)
     local_workfile_path = anatomy_result[template_key]["path"]
 
