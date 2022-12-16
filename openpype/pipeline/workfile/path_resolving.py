@@ -237,6 +237,7 @@ def get_last_workfile_with_version(
         for ext in dotted_extensions
     ]
     ext_expression = "(?:" + "|".join(regex_exts) + ")"
+
     # Replace `.{ext}` with `{ext}` so we are sure there is not dot at the end
     file_template = re.sub(r"\.?{ext}", ext_expression, file_template)
     # Replace optional keys with optional content regex
