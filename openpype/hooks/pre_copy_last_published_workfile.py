@@ -50,7 +50,7 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
                     self.__class__.__name__
                 )
             )
-            #return
+            return
 
         # Get data
         project_name = self.data["project_name"]
