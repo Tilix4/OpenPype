@@ -1,5 +1,4 @@
 """Create a rig asset."""
-import bpy
 
 import bpy
 
@@ -16,7 +15,3 @@ class CreateRig(plugin.Creator):
     family = "rig"
     icon = "wheelchair"
     defaults = ["Main", "Proxy"]
-    color_tag = "COLOR_03"
-    bl_types = frozenset(
-        {bpy.types.Armature, bpy.types.Collection, bpy.types.Object}
-    )
