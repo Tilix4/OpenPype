@@ -33,15 +33,16 @@ if __name__ == "__main__":
         )
         for datablock in datablocks_with_filepath:
             try:
-                datablock.filepath = str(
-                    Path(
-                        bpy.path.abspath(
-                            datablock.filepath,
-                            start=args.source_filepath.parent,
-                        )
-                    ).resolve()
-                )
-                datablock.reload()
+                if datablock.filepath.startswith("//"):
+                    datablock.filepath = str(
+                        Path(
+                            bpy.path.abspath(
+                                datablock.filepath,
+                                start=args.source_filepath.parent,
+                            )
+                        ).resolve()
+                    )
+                    datablock.reload()
             except (RuntimeError, ReferenceError) as e:
                 log.error(e)
     else:
