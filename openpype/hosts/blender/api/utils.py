@@ -315,3 +315,34 @@ def transfer_stack(
             }
             for attr in attributes:
                 setattr(target_data, attr, getattr(stack_datablock, attr))
+
+
+def make_paths_absolute(source_filepath: Path = None):
+    """Make all paths absolute for datablock in current blend file.
+
+    Args:
+        source_filepath (Path, optional): Filepath to remap paths from,
+            in case file copy has been executed without paths remapping.
+            Defaults to None.
+    """
+    # In case no source filepath try naive system
+    if not source_filepath:
+        bpy.ops.file.make_paths_absolute()
+        return
+
+    # Resolve path from source filepath with the relative filepath
+    datablocks_with_filepath = list(bpy.data.libraries) + list(bpy.data.images)
+    for datablock in datablocks_with_filepath:
+        try:
+            if datablock.filepath.startswith("//"):
+                datablock.filepath = str(
+                    Path(
+                        bpy.path.abspath(
+                            datablock.filepath,
+                            start=source_filepath.parent,
+                        )
+                    ).resolve()
+                )
+                datablock.reload()
+        except RuntimeError as e:
+            print(e)
