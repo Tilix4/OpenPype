@@ -28,8 +28,6 @@ from openpype.hosts.blender.api.utils import (
     link_to_collection,
 )
 from openpype.client.entities import (
-    get_subset_by_id,
-    get_version_by_id,
     get_matching_subset_id,
     get_asset_by_name,
     get_assets,
