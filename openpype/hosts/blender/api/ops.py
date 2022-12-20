@@ -28,9 +28,10 @@ from openpype.hosts.blender.api.utils import (
     link_to_collection,
 )
 from openpype.client.entities import (
-    get_matching_subset_id,
     get_asset_by_name,
     get_assets,
+    get_version_by_id,
+    get_subset_by_id,
 )
 from openpype.lib.path_tools import version_up
 from openpype.modules.sync_server.sync_server import (
@@ -1100,26 +1101,6 @@ class WM_OT_DownloadLastWorkfile(bpy.types.Operator):
                 {"WARNING"}, "Sync server module is disabled or unavailable."
             )
             return {"CANCELLED"}
-
-        session = legacy_io.Session
-        project_name = session.get("AVALON_PROJECT")
-        task_name = session.get("AVALON_TASK")
-        asset_name = session.get("AVALON_ASSET")
-        anatomy = Anatomy(project_name)
-        asset_doc = get_asset_by_name(
-            project_name,
-            session.get("AVALON_ASSET"),
-        )
-
-        # Get subset id
-        subset_id = get_matching_subset_id(
-            project_name, task_name, "workfile", asset_doc
-        )
-        if subset_id is None:
-            print(
-                f"Not any matched subset for task '{task_name}'"
-                f" of '{asset_name}'"
-            )
         
         last_workfile_path = download_last_workfile()
         if last_workfile_path:
