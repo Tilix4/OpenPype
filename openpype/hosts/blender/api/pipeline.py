@@ -18,7 +18,6 @@ from openpype.client.entities import (
     get_last_version_by_subset_name,
     get_asset_by_name,
 )
-from openpype.settings import get_project_settings
 from openpype.pipeline import (
     legacy_io,
     register_loader_plugin_path,
@@ -32,7 +31,6 @@ from openpype.lib import (
     register_event_callback,
     emit_event
 )
-from openpype.lib.dateutils import get_timestamp
 import openpype.hosts.blender
 from .workio import current_file
 
