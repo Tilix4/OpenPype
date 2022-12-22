@@ -24,6 +24,7 @@ BL_TYPE_DATAPATH = (  # TODO rename DATACOL
         bpy.types.Armature: "armatures",
         bpy.types.Material: "materials",
         bpy.types.GeometryNodeTree: "node_groups",
+        bpy.types.ParticleSettings: "particles",
         bpy.types.World: "worlds",
     }
 )
@@ -36,6 +37,7 @@ BL_TYPE_ICON = {
     bpy.types.Armature: "ARMATURE_DATA",
     bpy.types.Material: "MATERIAL_DATA",
     bpy.types.GeometryNodeTree: "NODETREE",
+    bpy.types.ParticleSettings: "PARTICLES",
     bpy.types.World: "WORLD_DATA",
 }
 # Types which can be handled through the outliner
