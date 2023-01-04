@@ -415,7 +415,7 @@ def download_last_published_workfile(
         local_workfile_path,
     )
 
-    return local_workfile_path
+    return local_workfile_path, last_published_workfile_path
 
 
 class SyncServerThread(threading.Thread):
