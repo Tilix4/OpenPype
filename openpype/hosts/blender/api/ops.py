@@ -1159,7 +1159,7 @@ class WM_OT_CheckWorkfileUpToDate(bpy.types.Operator):
 
                 # TODO refactor when download_last_workfile split
                 # Remap paths to absolute with source path
-                make_paths_absolute(last_workfile_path)
+                make_paths_absolute(Path(last_workfile_path))
 
                 bpy.ops.wm.save_mainfile()
                 return {"FINISHED"}
