@@ -153,6 +153,6 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
             last_version_doc,
             anatomy=anatomy,
             asset_doc=asset_doc,
-        )
+        )[0]
         # Keep source filepath for further path conformation
         self.data["source_filepath"] = published_workfile_path
