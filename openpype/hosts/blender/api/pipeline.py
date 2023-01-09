@@ -4,6 +4,7 @@ import traceback
 from typing import Callable, Dict, List, Optional
 
 import bpy
+from openpype.hosts.blender.api import utils
 
 from openpype.client.entities import get_asset_by_name
 
@@ -45,7 +46,9 @@ SCRIPTS_PATH = os.path.join(HOST_DIR, "scripts")
 
 ORIGINAL_EXCEPTHOOK = sys.excepthook
 
-AVALON_PROPERTY = 'avalon'
+# TODO refactor all imports to avoid this duplicate
+AVALON_PROPERTY = utils.AVALON_PROPERTY
+
 IS_HEADLESS = bpy.app.background
 
 log = Logger.get_logger(__name__)
