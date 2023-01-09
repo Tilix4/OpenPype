@@ -1,4 +1,5 @@
 """Shared functionalities for Blender files data manipulation."""
+from pathlib import Path
 from typing import List, Optional, Set, Union, Iterator
 from collections.abc import Iterable
 
