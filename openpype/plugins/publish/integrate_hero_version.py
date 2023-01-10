@@ -4,6 +4,7 @@ import clique
 import errno
 import shutil
 
+from bson.objectid import ObjectId
 import pyblish.api
 
 from openpype import AYON_SERVER_ENABLED
@@ -451,6 +452,7 @@ class IntegrateHeroVersion(pyblish.api.InstancePlugin):
                 # Create representation
                 else:
                     repre.pop("_id", None)
+                    repre["_id"] = ObjectId()
                     op_session.create_entity(project_name, "representation",
                                              repre)
 
