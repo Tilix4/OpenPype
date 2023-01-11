@@ -18,10 +18,11 @@ if __name__ == "__main__":
     ]
     for datablock in datablocks_with_filepath:
         try:
-            datablock.filepath = bpy.path.relpath(
-                str(Path(datablock.filepath).resolve()),
-                start=str(Path(bpy.data.filepath).parent.resolve()),
-            )
+            if not datablock.filepath.startswith("//"):
+                datablock.filepath = bpy.path.relpath(
+                    str(Path(datablock.filepath).resolve()),
+                    start=str(Path(bpy.data.filepath).parent.resolve()),
+                )
         except (RuntimeError, ValueError) as e:
             log.error(e)
 
