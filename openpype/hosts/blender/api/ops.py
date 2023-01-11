@@ -1149,9 +1149,9 @@ class WM_OT_CheckWorkfileUpToDate(bpy.types.Operator):
                 )
                 return {"CANCELLED"}
 
-            last_workfile_path, last_workfile_path, last_published_time = download_last_workfile()
-            if last_workfile_path:
-                bpy.ops.wm.open_mainfile(filepath=last_workfile_path)
+            (local_workfile_path, last_published_workfile_path), last_published_time = download_last_workfile()
+            if local_workfile_path:
+                bpy.ops.wm.open_mainfile(filepath=local_workfile_path)
 
                 # Update variables
                 context.scene["op_published_time"] = last_published_time
@@ -1159,7 +1159,7 @@ class WM_OT_CheckWorkfileUpToDate(bpy.types.Operator):
 
                 # TODO refactor when download_last_workfile split
                 # Remap paths to absolute with source path
-                make_paths_absolute(Path(last_workfile_path))
+                make_paths_absolute(Path(last_published_workfile_path))
 
                 bpy.ops.wm.save_mainfile()
                 return {"FINISHED"}
