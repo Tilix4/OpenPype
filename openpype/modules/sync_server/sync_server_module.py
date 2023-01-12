@@ -1505,7 +1505,13 @@ class SyncServerModule(OpenPypeModule, ITrayModule):
                         }
                     }
                 ]}
-            ]
+            ],
+            "files.sites": {
+                "$elemMatch": {
+                        "name": active_site,
+                        "paused": {"$exists": True, "$ne": True},
+                }
+            }
         }
 
         aggr = [
