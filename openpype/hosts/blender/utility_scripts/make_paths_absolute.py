@@ -33,7 +33,7 @@ if __name__ == "__main__":
         )
         for datablock in datablocks_with_filepath:
             try:
-                if datablock.filepath.startswith("//"):
+                if datablock and datablock.filepath.startswith("//"):
                     datablock.filepath = str(
                         Path(
                             bpy.path.abspath(
