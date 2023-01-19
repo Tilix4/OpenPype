@@ -1,7 +1,5 @@
 """Load an asset in Blender from an Alembic file."""
 
-import bpy
-
 from openpype.hosts.blender.api import plugin
 
 
@@ -20,26 +18,6 @@ class CacheModelLoader(plugin.AssetLoader):
     label = "Import Alembic"
     icon = "download"
     color = "orange"
-    color_tag = "COLOR_04"
     order = 4
 
-    def _load_process(self, libpath, container_name):  # TODO
-
-        current_objects = set(bpy.data.objects)
-
-        relative = bpy.context.preferences.filepaths.use_relative_paths
-        bpy.ops.wm.alembic_import(
-            filepath=libpath,
-            relative_path=relative
-        )
-
-        objects = set(bpy.data.objects) - current_objects
-
-        for obj in objects:
-            for collection in obj.users_collection:
-                collection.objects.unlink(obj)
-
-        plugin.link_to_collection(objects, asset_group)
-
-        plugin.orphans_purge()
-        plugin.deselect_all()
+    load_type = "ABC"

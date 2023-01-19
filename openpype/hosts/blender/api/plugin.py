@@ -854,24 +854,111 @@ class AssetLoader(Loader):
 
         return container
 
-    def _load_fbx(self, libpath, container_name):
-        """Load fbx process."""
+    def _containerise_objects(
+        self,
+        objects: List[bpy.types.Object],
+        container_name: str,
+        container: OpenpypeContainer = None,
+    ) -> Tuple[OpenpypeContainer, List[bpy.types.ID]]:
+        """Containerise objects.
 
-        current_objects = set(bpy.data.objects)
+        Args:
+            objects (List[bpy.types.Object]): Objects to Containerise.
+            container_name (str): Name of container to link.
+            container (OpenpypeContainer): Load into existing container.
+                Defaults to None.
 
-        bpy.ops.import_scene.fbx(filepath=libpath)
-
-        objects = set(bpy.data.objects) - current_objects
+        Returns:
+            Tuple[List[bpy.types.ID], OpenpypeContainer]: 
+                (Created scene container, Objects datablocks)
+        """
 
         for obj in objects:
             for collection in obj.users_collection:
                 collection.objects.unlink(obj)
 
         container_collection = bpy.data.collections.get(container_name)
+
+        if not container_collection:
+            # Create collection container
+            container_collection = bpy.data.collections.new(container_name)
+            bpy.context.scene.collection.children.link(container_collection)
+
         link_to_collection(objects, container_collection)
 
-        orphans_purge()
-        deselect_all()
+        datablocks = list(objects)
+
+        if container:
+            # Add datablocks to container
+            add_datablocks_to_container(datablocks, container)
+
+            # Rename container
+            if container.name != container_name:
+                container.name = container_name
+        else:
+            # Create container if none providen
+            container = create_container(container_name, datablocks)
+
+        # Set data to container
+        container.outliner_entity = container_collection
+
+        return container, datablocks
+
+    def _load_abc(
+        self,
+        libpath: Path,
+        container_name: str,
+        container: OpenpypeContainer = None,
+    ) -> Tuple[OpenpypeContainer, List[bpy.types.ID]]:
+        """Load ABC process.
+
+        Args:
+            libpath (Path): Path of ABC file to load.
+            container_name (str): Name of container to link.
+            container (OpenpypeContainer): Load into existing container.
+                Defaults to None.
+
+        Returns:
+            Tuple[List[bpy.types.ID], OpenpypeContainer]:
+                (Created scene container, Loaded datablocks)
+        """
+
+        current_objects = set(bpy.data.objects)
+
+        window = bpy.context.window_manager.windows[0]
+        with bpy.context.temp_override(window=window):
+            bpy.ops.wm.alembic_import(filepath=libpath.as_posix())
+
+        objects = set(bpy.data.objects) - current_objects
+
+        return self._containerise_objects(objects, container_name, container)
+
+    def _load_fbx(
+        self,
+        libpath: Path,
+        container_name: str,
+        container: OpenpypeContainer = None,
+    ) -> Tuple[OpenpypeContainer, List[bpy.types.ID]]:
+        """Load FBX process.
+
+        Args:
+            libpath (Path): Path of FBX file to load.
+            container_name (str): Name of container to link.
+            container (OpenpypeContainer): Load into existing container.
+                Defaults to None.
+
+        Returns:
+            Tuple[List[bpy.types.ID], OpenpypeContainer]:
+                (Created scene container, Loaded datablocks)
+        """
+
+        current_objects = set(bpy.data.objects)
+
+        bpy.ops.import_scene.fbx(filepath=libpath.as_posix())
+
+        objects = set(bpy.data.objects) - current_objects
+
+        return self._containerise_objects(objects, container_name, container)
 
     def _link_blend(
         self,
@@ -1021,6 +1108,10 @@ class AssetLoader(Loader):
             return self._instance_blend
         elif self.load_type == "LINK":
             return self._link_blend
+        elif self.load_type == "FBX":
+            return self._load_fbx
+        elif self.load_type == "ABC":
+            return self._load_abc
         else:
             raise ValueError(
                 "'load_type' attribute must be set by loader subclass to:"

@@ -15,8 +15,6 @@ class FbxCameraLoader(plugin.AssetLoader):
     label = "Import Camera"
     icon = "download"
     color = "orange"
-    color_tag = "COLOR_05"
     order = 4
 
-    def _load_process(self, libpath, container_name):  # TODO
-        return self._load_fbx(libpath, container_name)
+    load_type = "FBX"
