@@ -97,7 +97,9 @@ def load_casting(project_name, shot_name):
     gazu.client.set_host(os.environ["KITSU_SERVER"])
     gazu.log_in(os.environ["KITSU_LOGIN"], os.environ["KITSU_PWD"])
 
-    shot_data = get_asset_by_name(project_name, shot_name, fields=["data"])["data"]
+    shot_data = get_asset_by_name(project_name, shot_name, fields=["data"])[
+        "data"
+    ]
 
     shot = gazu.shot.get_shot(shot_data["zou"]["id"])
     casting = gazu.casting.get_shot_casting(shot)
@@ -223,7 +225,7 @@ def build_anim(project_name, asset_name):
             plugin.process([obj])
             # instance = plugin.process([obj])
             # instance.name = f"{instance.name}:{obj.name}"
-    
+
     create_instance("CreateReview", "reviewMain", useSelection=True)
 
 
@@ -247,6 +249,12 @@ def build_workfile():
     project_name = legacy_io.Session["AVALON_PROJECT"]
     asset_name = legacy_io.Session.get("AVALON_ASSET")
     task_name = legacy_io.Session.get("AVALON_TASK").lower()
+
+    # Always link world
+    _world_container, world_datablocks = load_subset(
+        project_name, "WorldsBank", "worldBotanique", "Link"
+    )
+    bpy.context.scene.world = next(iter(world_datablocks))
 
     if task_name in ("model", "modeling", "fabrication"):
         build_model(asset_name)
