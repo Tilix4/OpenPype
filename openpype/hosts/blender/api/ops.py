@@ -19,7 +19,12 @@ import bpy.utils.previews
 
 from openpype import style
 from openpype.pipeline import get_current_asset_name, get_current_task_name
-from openpype.client.entities import get_assets, get_asset_by_name, get_subset_by_id, get_version_by_id
+from openpype.client.entities import (
+    get_asset_by_name,
+    get_assets,
+    get_subset_by_id,
+    get_version_by_id,
+)
 from openpype.hosts.blender.api.lib import ls
 from openpype.hosts.blender.api.utils import (
     BL_OUTLINER_TYPES,
@@ -344,8 +349,8 @@ class LaunchLibrary(LaunchQtApp):
 def _update_entries_preset(self, context):
     """Update some entries with a preset.
 
-    - Set `datapath`'s value to the first item of the list to avoid `None` values when
-    the length of the items list reduces.
+    - Set `datapath`'s value to the first item of the list to avoid `None`
+    values when the length of the items list reduces.
     - Update variant name to the first item.
     """
     creator_params = context.scene["openpype_creators"][self.creator_name]
@@ -421,8 +426,9 @@ class ManageOpenpypeInstance:
 
     creator_name: EnumProperty(
         name="Creator",
-        # Items from all creator plugins, referenced by their class name, label is displayed in UI
-        # creator class name is used later to get the creator plugin
+        # Items from all creator plugins, referenced by their class name,
+        # label is displayed in UI creator class name is used later to get
+        # the creator plugin
         items=lambda _, context: (
             (name, params.get("label"), "")
             for name, params in context.scene["openpype_creators"].items()
@@ -461,7 +467,8 @@ class ManageOpenpypeInstance:
     datapath: EnumProperty(
         name="Data type",
         # Build datapath items by getting the creator by its name
-        # Matching the appropriate datapath using the bl_types field which lists all relevant data types
+        # Matching the appropriate datapath using the bl_types field
+        # which lists all relevant data types
         items=lambda self, context: [
             (datapath, name, "")
             for datapath, name in context.scene["openpype_creators"][
@@ -563,7 +570,8 @@ class SCENE_OT_CreateOpenpypeInstance(
         # Get creator class
         Creator = get_legacy_creator_by_name(self.creator_name)
 
-        # NOTE Shunting legacy_create because of useless overhead and deprecated design.
+        # NOTE Shunting legacy_create because of useless overhead
+        # and deprecated design.
         # Will see if compatible with new creator when implemented for Blender
         plugin = Creator(
             self.subset_name, self.asset_name, {"variant": self.variant_name}
@@ -596,7 +604,8 @@ class SCENE_OT_RemoveOpenpypeInstance(
         # Get creator class
         Creator = get_legacy_creator_by_name(self.creator_name)
 
-        # NOTE Shunting legacy_create because of useless overhead and deprecated design.
+        # NOTE Shunting legacy_create because of useless overhead 
+        # and deprecated design.
         # Will see if compatible with new creator when implemented for Blender
         avalon_prop = op_instance["avalon"]
         plugin = Creator(
@@ -685,7 +694,8 @@ class SCENE_OT_AddToOpenpypeInstance(
         # Get creator class
         Creator = get_legacy_creator_by_name(self.creator_name)
 
-        # NOTE Shunting legacy_create because of useless overhead and deprecated design.
+        # NOTE Shunting legacy_create because of useless overhead and
+        # deprecated design.
         # Will see if compatible with new creator when implemented for Blender
         avalon_prop = op_instance["avalon"]
         plugin = Creator(
