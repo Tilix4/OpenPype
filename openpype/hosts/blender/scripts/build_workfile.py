@@ -1,4 +1,5 @@
 import os
+from typing import Set
 import bpy
 
 from openpype.client import (
@@ -7,6 +8,8 @@ from openpype.client import (
     get_last_version_by_subset_id,
     get_representations,
 )
+from openpype.hosts.blender.api.properties import OpenpypeContainer
+from openpype.hosts.blender.api.utils import link_to_collection
 from openpype.modules import ModulesManager
 from openpype.pipeline import (
     legacy_io,
@@ -76,7 +79,7 @@ def load_subset(
 
 def create_instance(creator_name, instance_name, **options):
     """Create openpype publishable instance."""
-    legacy_create(
+    return legacy_create(
         get_legacy_creator_by_name(creator_name),
         name=instance_name,
         asset=legacy_io.Session.get("AVALON_ASSET"),
@@ -84,7 +87,7 @@ def create_instance(creator_name, instance_name, **options):
     )
 
 
-def load_casting(project_name, shot_name):
+def load_casting(project_name, shot_name) -> Set[OpenpypeContainer]:
     """Load casting from shot_name using kitsu api."""
 
     modules_manager = ModulesManager()
@@ -104,15 +107,23 @@ def load_casting(project_name, shot_name):
     shot = gazu.shot.get_shot(shot_data["zou"]["id"])
     casting = gazu.casting.get_shot_casting(shot)
 
+    containers = set()
     for actor in casting:
         for _ in range(actor["nb_occurences"]):
             if actor["asset_type_name"] == "Environment":
                 subset_name = "setdressMain"
             else:
                 subset_name = "rigMain"
-            load_subset(project_name, actor["asset_name"], subset_name, "Link")
+
+            # Keep containers
+            container, _datablocks = load_subset(
+                project_name, actor["asset_name"], subset_name, "Link"
+            )
+            containers.add(container)
 
     gazu.log_out()
+
+    return containers
 
 
 def build_model(asset_name):
@@ -160,11 +171,18 @@ def build_layout(project_name, asset_name):
         asset_name (str):  The current asset name from OpenPype Session.
     """
 
-    create_instance("CreateLayout", "layoutMain")
+    layout_instance = create_instance("CreateLayout", "layoutMain")
 
     # Load casting from kitsu breakdown.
     try:
-        load_casting(project_name, asset_name)
+        containers = load_casting(project_name, asset_name)
+
+        # Link loaded containers to layout collection
+        for c in containers:
+            layout_instance.datablock_refs[0].datablock.children.link(
+                c.outliner_entity
+            )
+            bpy.context.scene.collection.children.unlink(c.outliner_entity)
     except RuntimeError:
         pass
 
