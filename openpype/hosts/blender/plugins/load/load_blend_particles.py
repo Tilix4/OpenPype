@@ -13,7 +13,7 @@ class BlenderParticlesLoader(plugin.AssetLoader):
     color = "orange"
     no_namespace = True
 
-    bl_types = frozenset({bpy.types.ParticleSettings, bpy.types.Object})
+    bl_types = frozenset({bpy.types.ParticleSettings})
 
 
 class LinkBlenderParticlesLoader(BlenderParticlesLoader):
