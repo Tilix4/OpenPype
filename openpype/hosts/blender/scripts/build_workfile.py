@@ -9,7 +9,6 @@ from openpype.client import (
     get_representations,
 )
 from openpype.hosts.blender.api.properties import OpenpypeContainer
-from openpype.hosts.blender.api.utils import link_to_collection
 from openpype.modules import ModulesManager
 from openpype.pipeline import (
     legacy_io,
@@ -72,9 +71,8 @@ def load_subset(
     all_loaders = discover_loader_plugins(project_name=project_name)
     loaders = loaders_from_representation(all_loaders, representation)
     for loader in loaders:
-        if loader_type and loader_type not in loader.__name__:
-            continue
-        return load_container(loader, representation)
+        if loader_type == loader.load_type:
+            return load_container(loader, representation)
 
 
 def create_instance(creator_name, instance_name, **options):
@@ -114,10 +112,8 @@ def load_casting(project_name, shot_name) -> Set[OpenpypeContainer]:
                 subset_name = "setdressMain"
             else:
                 subset_name = "rigMain"
-
-            # Keep containers
             container, _datablocks = load_subset(
-                project_name, actor["asset_name"], subset_name, "Link"
+                project_name, actor["asset_name"], subset_name, "LINK"
             )
             containers.add(container)
 
@@ -146,7 +142,7 @@ def build_look(project_name, asset_name):
         asset_name (str):  The current asset name from OpenPype Session.
     """
     create_instance("CreateLook", "lookMain")
-    load_subset(project_name, asset_name, "modelMain", "Append")
+    load_subset(project_name, asset_name, "modelMain", "APPEND")
 
 
 def build_rig(project_name, asset_name):
@@ -160,7 +156,7 @@ def build_rig(project_name, asset_name):
     bpy.context.object.name = f"{asset_name}_armature"
     bpy.context.object.data.name = f"{asset_name}_armature"
     create_instance("CreateRig", "rigMain", useSelection=True)
-    load_subset(project_name, asset_name, "modelMain", "Append")
+    load_subset(project_name, asset_name, "modelMain", "APPEND")
 
 
 def build_layout(project_name, asset_name):
@@ -184,24 +180,59 @@ def build_layout(project_name, asset_name):
             )
             bpy.context.scene.collection.children.unlink(c.outliner_entity)
     except RuntimeError:
-        pass
+        containers = {}
 
-    # Try using camera from loaded casting for the creation of
-    # the instance camera collection.
-    bpy.ops.object.select_all(action="DESELECT")
-    for obj in bpy.context.scene.objects:
-        if obj.type == "CAMERA":
-            obj.select_set(True)
-            break
-    create_instance("CreateCamera", "cameraMain", useSelection=True)
+    # Try to load camera from environment's setdress
+    try:
+        # Get env asset name
+        env_asset_name = next(
+            (
+                c["avalon"]["asset_name"]
+                for c in containers
+                if c.get("avalon", {}).get("family") == "setdress"
+            ),
+            None,
+        )
+        if env_asset_name:
+            # Load camera published at environment task
+            cam_container, _cam_datablocks = load_subset(
+                project_name, env_asset_name, "cameraMain", "APPEND"
+            )
 
-    # Select camera from cameraMain instance to link with the review.
-    bpy.ops.object.select_all(action="DESELECT")
-    for obj in bpy.context.scene.objects:
-        if obj.type == "CAMERA":
-            obj.select_set(True)
-            break
-    create_instance("CreateReview", "reviewMain", useSelection=True)
+            # Select camera
+            main_camera = next(
+                d_ref.datablock
+                for d_ref in cam_container.datablock_refs
+                if hasattr(d_ref.datablock, "type")
+                and d_ref.datablock.type == "CAMERA"
+            )
+            main_camera.select_set(True)
+
+            # Remove camera container to make it publishable
+            # TODO replace by make_container_publishable when fixed
+            openpype_containers = bpy.context.scene.openpype_containers
+            openpype_containers.remove(
+                openpype_containers.find(cam_container.name)
+            )
+    except RuntimeError:
+        main_camera = None
+
+    # Create camera instance from loaded camera
+    cam_instance = create_instance(
+        "CreateCamera", "cameraMain", useSelection=True
+    )
+
+    # Select camera from cameraMain instance to link with the review
+    main_camera.name = cam_instance.name
+    main_camera.data.name = cam_instance.name
+
+    # Create review instance with camera instance's camera object
+    review_instance = create_instance("CreateReview", "reviewMain")
+    # TODO dirty as hell, instance creation must be done using the operators to avoid this
+    review_instance.datablock_refs[0].datablock.objects.unlink(
+        review_instance.datablock_refs[0].datablock.objects[0]
+    )
+    review_instance.datablock_refs[0].datablock.objects.link(main_camera)
 
     # load the board mov as image background linked into the camera.
     # TODO when fixed
@@ -216,8 +247,8 @@ def build_anim(project_name, asset_name):
         asset_name (str):  The current asset name from OpenPype Session.
     """
 
-    load_subset(project_name, asset_name, "layoutMain", "Append")
-    load_subset(project_name, asset_name, "cameraMain", "Link")
+    load_subset(project_name, asset_name, "layoutMain", "APPEND")
+    load_subset(project_name, asset_name, "cameraMain", "LINK")
 
     # Get animation instance creator
     Creator = get_legacy_creator_by_name("CreateAnimation")
@@ -255,11 +286,11 @@ def build_render(project_name, asset_name):
         asset_name (str):  The current asset name from OpenPype Session.
     """
 
-    if not load_subset(project_name, asset_name, "layoutFromAnim", "Link"):
-        load_subset(project_name, asset_name, "layoutMain", "Append")
-    if not load_subset(project_name, asset_name, "cameraFromAnim", "Link"):
-        load_subset(project_name, asset_name, "cameraMain", "Link")
-    load_subset(project_name, asset_name, "animationMain", "Link")
+    if not load_subset(project_name, asset_name, "layoutFromAnim", "LINK"):
+        load_subset(project_name, asset_name, "layoutMain", "APPEND")
+    if not load_subset(project_name, asset_name, "cameraFromAnim", "LINK"):
+        load_subset(project_name, asset_name, "cameraMain", "LINK")
+    load_subset(project_name, asset_name, "animationMain", "LINK")
 
 
 def build_workfile():
@@ -267,12 +298,6 @@ def build_workfile():
     project_name = legacy_io.Session["AVALON_PROJECT"]
     asset_name = legacy_io.Session.get("AVALON_ASSET")
     task_name = legacy_io.Session.get("AVALON_TASK").lower()
-
-    # Always link world
-    _world_container, world_datablocks = load_subset(
-        project_name, "WorldsBank", "worldBotanique", "Link"
-    )
-    bpy.context.scene.world = next(iter(world_datablocks))
 
     if task_name in ("model", "modeling", "fabrication"):
         build_model(asset_name)
