@@ -781,6 +781,8 @@ class AssetLoader(Loader):
         else:
             outliner_entity = None
 
+        print("tata", datablocks, [d.use_fake_user for d in datablocks])
+
         if container:
             # Add datablocks to container
             add_datablocks_to_container(datablocks, container)
