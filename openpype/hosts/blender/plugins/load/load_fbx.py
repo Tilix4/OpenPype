@@ -151,7 +151,13 @@ class FbxLoader(plugin.AssetLoader):
 
             # Replace old by new datablock
             if new_datablock:
+                original_datablock_name = old_datablock.name
+                old_datablock.name += ".old"
+                new_datablock.name = original_datablock_name
                 old_datablock.user_remap(new_datablock)
+            else:
+                for collection in old_datablock.users_collection:
+                    collection.objects.unlink(old_datablock)
 
         # Restore parent collection if existing
         if parent_collection:
