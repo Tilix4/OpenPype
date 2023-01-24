@@ -14,10 +14,7 @@ from . import ops, properties, ui
 import pyblish.api
 
 from openpype.lib.dateutils import get_timestamp
-from openpype.client.entities import (
-    get_last_version_by_subset_name,
-    get_asset_by_name,
-)
+from openpype.client.entities import get_asset_by_name
 from openpype.settings import get_project_settings
 from openpype.pipeline import (
     legacy_io,
@@ -33,7 +30,7 @@ from openpype.lib import (
     emit_event
 )
 import openpype.hosts.blender
-from .workio import current_file
+from .workio import current_file, check_workfile_up_to_date
 
 HOST_DIR = os.path.dirname(os.path.abspath(openpype.hosts.blender.__file__))
 PLUGINS_DIR = os.path.join(HOST_DIR, "plugins")
@@ -145,22 +142,18 @@ def set_use_file_compression():
 def on_new():
     set_start_end_frames()
     set_use_file_compression()
-    bpy.types.WindowManager.is_workfile_out_of_date = bpy.props.BoolProperty(
-        name="Is Workfile Out Of Date",
-    )
-    bpy.types.WindowManager.current_workfile_last_publish_time = (
-        bpy.props.StringProperty(
-            name="Last Publish Time",
-        )
+    bpy.types.Scene.is_workfile_up_to_date= bpy.props.BoolProperty(
+        name="Is Workfile Up To Date",
     )
 
 
 def on_open():
     set_start_end_frames()
     set_use_file_compression()
-    if not check_workfile_up_to_date():
-        bpy.context.window_manager.is_workfile_out_of_date = True
-        bpy.ops.wm.workfile_out_of_date("INVOKE_DEFAULT")
+    if hasattr(
+        bpy.types, bpy.ops.wm.check_workfile_up_to_date.idname()
+    ):
+        bpy.ops.wm.check_workfile_up_to_date("INVOKE_DEFAULT")
 
 
 
@@ -248,52 +241,6 @@ def _discover_gui() -> Optional[Callable]:
             return gui
 
     return None
-
-
-def check_workfile_up_to_date() -> bool:
-    """Check if the current workfile is out of date.
-    This is based on last modification date, so if a user modifies an out of
-    date workfile, this will return `False`. Also, in case of partial publish,
-    this will return `True`.
-
-    Returns:
-        bool: True if the current workfile is up to date.
-    """
-
-    session = legacy_io.Session
-
-    # Getting date and time of the latest published workfile
-    last_published_version = get_last_version_by_subset_name(
-        legacy_io.active_project(),
-        f"workfile{session.get('AVALON_TASK')}",
-        asset_name=session.get("AVALON_ASSET"),
-    )
-
-    # Check if version exists
-    if last_published_version:
-        last_published_time = last_published_version["data"]["time"]
-    else:
-        return True
-
-    window_manager = bpy.context.window_manager
-    if window_manager.current_workfile_last_publish_time:
-        return (
-            last_published_time
-            <= window_manager.current_workfile_last_publish_time
-        )
-
-    # Getting date and time of the latest locally installed workfile
-    # Time is converted to use the same format as for `last_published_time`
-    workfile_time = get_timestamp(
-        datetime.fromtimestamp(Path(current_file()).stat().st_mtime)
-    )
-
-    if last_published_time <= workfile_time:
-        window_manager.current_workfile_last_publish_time = (
-            last_published_version["data"]["time"]
-        )
-        return True
-    return False
 
 
 def metadata_update(node: bpy.types.bpy_struct_meta_idprop, data: Dict):
