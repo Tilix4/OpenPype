@@ -1,8 +1,6 @@
 import os
 import sys
 import traceback
-from pathlib import Path
-from datetime import datetime
 from typing import Callable, Dict, Iterator, List, Optional
 
 import bpy
