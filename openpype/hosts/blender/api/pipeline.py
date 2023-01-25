@@ -163,7 +163,7 @@ def on_new():
     project = os.environ.get("AVALON_PROJECT")
     settings = get_project_settings(project)
 
-    bpy.types.Scene.is_workfile_up_to_date= bpy.props.BoolProperty(
+    bpy.types.Scene.is_workfile_up_to_date = bpy.props.BoolProperty(
         name="Is Workfile Up To Date",
     )
 
