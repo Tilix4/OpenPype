@@ -22,10 +22,6 @@ from openpype import style
 from openpype.client.entities import (
     get_asset_by_name,
     get_assets,
-    get_subset_by_id,
-    get_version_by_id,
-    match_subset_id,
-    get_representation_by_task,
 )
 from openpype.hosts.blender.api.lib import add_datablocks_to_container
 from openpype.hosts.blender.api.utils import (
@@ -54,6 +50,7 @@ from openpype.hosts.blender.scripts import build_workfile
 from openpype.tools.utils.lib import qt_app_context
 from .workio import OpenFileCacher, save_file, work_root
 from openpype.pipeline import legacy_io, Anatomy
+from openpype.modules.base import ModulesManager
 from openpype.tools.utils import host_tools
 from openpype.tools.utils.lib import qt_app_context
 from .workio import (
@@ -62,6 +59,7 @@ from .workio import (
     work_root,
     check_workfile_up_to_date,
 )
+from .lib import download_last_workfile
 
 PREVIEW_COLLECTIONS: Dict = dict()
 
