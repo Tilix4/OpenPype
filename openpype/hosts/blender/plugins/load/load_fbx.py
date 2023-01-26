@@ -8,7 +8,6 @@ import bpy
 
 from openpype.hosts.blender.api import plugin
 from openpype.hosts.blender.api.properties import OpenpypeContainer
-from openpype.hosts.blender.api.pipeline import AVALON_PROPERTY
 from openpype.hosts.blender.api.utils import (
     link_to_collection,
     unlink_from_collection,
@@ -58,12 +57,17 @@ class FbxLoader(plugin.AssetLoader):
             for collection in obj.users_collection:
                 collection.objects.unlink(obj)
 
-        container_collection = bpy.data.collections.get(container_name)
+        container_collection = None
 
-        if not container or not container_collection:
+        if container:
+            container_collection = bpy.data.collections.get(container_name)
+
+        if not container_collection:
             # Create collection container
             container_collection = bpy.data.collections.new(container_name)
             bpy.context.scene.collection.children.link(container_collection)
+            # update name with occurence numbering
+            container_name = container_collection.name
 
         link_to_collection(objects, container_collection)
 
@@ -154,6 +158,7 @@ class FbxLoader(plugin.AssetLoader):
                 original_datablock_name = old_datablock.name
                 old_datablock.name += ".old"
                 new_datablock.name = original_datablock_name
+                old_datablock.make_local()
                 old_datablock.user_remap(new_datablock)
             else:
                 for collection in old_datablock.users_collection:
