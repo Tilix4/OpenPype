@@ -71,7 +71,7 @@ def load_subset(
     all_loaders = discover_loader_plugins(project_name=project_name)
     loaders = loaders_from_representation(all_loaders, representation)
     for loader in loaders:
-        if loader_type and loader_type not in loader.__name__:
+        if loader_type in loader.__name__:
             return load_container(loader, representation)
 
 
