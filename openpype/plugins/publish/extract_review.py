@@ -1043,7 +1043,7 @@ class ExtractReview(pyblish.api.InstancePlugin):
         # Add exclusive mapping for audio channels
         audio_in_args.append("-map 0:v")
         for i in range(len(audio_inputs)):
-            audio_in_args.append(f"-map {i+1}:a")
+            audio_in_args.append("-map {}:a".format(i+1))
 
         # NOTE: These were changed from input to output arguments.
         # NOTE: value in "-ac" was hardcoded to 2, changed to audio inputs len.
