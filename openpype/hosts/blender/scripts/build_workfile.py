@@ -202,12 +202,12 @@ def build_layout(project_name, asset_name):
 
             # Select camera
             main_camera = next(
-                d_ref.datablock
+                (d_ref.datablock
                 for d_ref in cam_container.datablock_refs
                 if hasattr(d_ref.datablock, "type")
-                and d_ref.datablock.type == "CAMERA"
+                and d_ref.datablock.type == "CAMERA"),
+                None
             )
-            main_camera.select_set(True)
 
             # Remove camera container to make it publishable
             # TODO replace by make_container_publishable when fixed
@@ -219,22 +219,31 @@ def build_layout(project_name, asset_name):
         main_camera = None
 
     # Create camera instance from loaded camera
+    if main_camera:
+        main_camera.select_set(True)
     cam_instance = create_instance(
-        "CreateCamera", "cameraMain", useSelection=True
+        "CreateCamera", "cameraMain", useSelection=bool(main_camera)
     )
+    if not main_camera:
+        main_camera = next(
+                obj
+                for obj in cam_instance.datablock_refs[0].datablock.all_objects
+                if hasattr(obj, "type")
+                and obj.type == "CAMERA"
+            )
+        # NOTE If None error because of camera, there is an issue at instance creation
 
     # Create review instance with camera instance's camera object
     review_instance = create_instance("CreateReview", "reviewMain")
+
+    # Select camera from cameraMain instance to link with the review
     # TODO dirty as hell, instance creation must be done using the operators to avoid this
     review_instance.datablock_refs[0].datablock.objects.unlink(
         review_instance.datablock_refs[0].datablock.objects[0]
     )
-
-    # Select camera from cameraMain instance to link with the review
-    if main_camera:
-        main_camera.name = cam_instance.name
-        main_camera.data.name = cam_instance.name
-        review_instance.datablock_refs[0].datablock.objects.link(main_camera)
+    main_camera.name = cam_instance.name
+    main_camera.data.name = cam_instance.name
+    review_instance.datablock_refs[0].datablock.objects.link(main_camera)
 
     # load the board mov as image background linked into the camera
     load_subset(project_name, asset_name, "BoardReference", "Background", "mov")
