@@ -133,6 +133,7 @@ class IntegrateAsset(pyblish.api.InstancePlugin):
                 "simpleUnrealTexture",
                 "online",
                 "uasset",
+                "woolly.setdress",
                 "blender.nodegroup",
                 "blender.particles",
                 "blender.world",
