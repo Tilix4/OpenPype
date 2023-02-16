@@ -24,7 +24,7 @@ class BlenderNodegroupLoader(plugin.AssetLoader):
                 {
                     m.node_group.name: m
                     for m in o.modifiers
-                    if m.type == "NODES"
+                    if m.type == "NODES" and m.node_group
                 }
             )
 
