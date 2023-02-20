@@ -5,7 +5,7 @@ from openpype.hosts.blender.api.properties import OpenpypeContainer
 from openpype.hosts.blender.api import plugin
 
 
-class LayoutLoader(plugin.AssetLoader):
+class LayoutLoader(plugin.BlendLibraryLoader):
     """Link layout from a .blend file."""
 
     color = "orange"
@@ -49,6 +49,7 @@ class LayoutLoader(plugin.AssetLoader):
     def load(self, *args, **kwargs):
         """Override `load` to create one animation instance by loaded rig."""
         container, datablocks = super().load(*args, **kwargs)
+        self._make_local_actions(container)
 
         # Make loaded actions local, original ones are kept for reference.
         self._make_local_actions(container)
