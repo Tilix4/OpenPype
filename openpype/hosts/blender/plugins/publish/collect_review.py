@@ -90,6 +90,7 @@ class CollectReview(pyblish.api.InstancePlugin):
                     "fps": instance.context.data["fps"],
                     "isolate": isolate_objects,
                     "audio": audio_tracks,
+                    "render_mode": instance.name.endswith("Render"),
                 }
             )
             instance.data["remove"] = True
@@ -107,6 +108,7 @@ class CollectReview(pyblish.api.InstancePlugin):
                     "fps": instance.context.data["fps"],
                     "isolate": isolate_objects,
                     "audio": audio_tracks,
+                    "render_mode": instance.name.endswith("Render"),
                 }
             )
             self.log.debug(f"instance data: {instance.data}")

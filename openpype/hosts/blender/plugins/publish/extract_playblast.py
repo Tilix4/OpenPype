@@ -47,6 +47,9 @@ class ExtractPlayblast(openpype.api.Extractor):
         # get isolate objects list
         isolate = instance.data("isolate", None)
 
+        # get render mode
+        render_mode = instance.data.get("render_mode", False)
+
         # get ouput path
         stagingdir = self.staging_dir(instance)
         filename = instance.name
@@ -65,6 +68,7 @@ class ExtractPlayblast(openpype.api.Extractor):
                 "filename": path,
                 "overwrite": True,
                 "isolate": isolate,
+                "render_mode": render_mode,
             }
         )
         preset.setdefault(

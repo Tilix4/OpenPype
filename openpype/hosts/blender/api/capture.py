@@ -25,6 +25,7 @@ def capture(
     overwrite=False,
     image_settings=None,
     display_options=None,
+    render_mode=False,
 ):
     """Playblast in an independent windows
 
@@ -48,6 +49,8 @@ def capture(
         image_settings (dict, optional): Supplied image settings for render,
             using `ImageSettings`
         display_options (dict, optional): Supplied display options for render
+        render_mode (bool, optional):
+            Use render engine insted of openGL render. Default to False.
     """
 
     scene = bpy.context.scene
@@ -99,13 +102,10 @@ def capture(
         stack.enter_context(applied_image_settings(window, image_settings))
 
         with context_override(window=window):
-            bpy.ops.render.opengl(
-                animation=True,
-                render_keyed_only=False,
-                sequencer=False,
-                write_still=False,
-                view_context=True,
-            )
+            if render_mode:
+                bpy.ops.render.render(animation=True, use_viewport=True)
+            else:
+                bpy.ops.render.opengl(animation=True)
 
     return filename
 
