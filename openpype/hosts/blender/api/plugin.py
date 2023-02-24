@@ -319,13 +319,15 @@ def deselect_all():
         if obj.mode != 'OBJECT':
             modes.append((obj, obj.mode))
             bpy.context.view_layer.objects.active = obj
-            bpy.ops.object.mode_set(mode='OBJECT')
+            if bpy.ops.object.mode_set.poll():
+                bpy.ops.object.mode_set(mode='OBJECT')
 
     bpy.ops.object.select_all(action='DESELECT')
 
     for p in modes:
         bpy.context.view_layer.objects.active = p[0]
-        bpy.ops.object.mode_set(mode=p[1])
+        if bpy.ops.object.mode_set.poll():
+            bpy.ops.object.mode_set(mode=p[1])
 
     bpy.context.view_layer.objects.active = active
 

@@ -14,17 +14,13 @@ def capture(
     camera=None,
     width=None,
     height=None,
-    filename=None,
-    start_frame=None,
-    end_frame=None,
-    step_frame=None,
-    sound=None,
+    filepath=None,
     isolate=None,
     focus=None,
     maintain_aspect_ratio=True,
     overwrite=False,
-    image_settings=None,
     display_options=None,
+    **preset_settings,
 ):
     """Playblast in an independent windows
 
@@ -32,21 +28,14 @@ def capture(
         camera (str, optional): Name of camera, defaults to "Camera"
         width (int, optional): Width of output in pixels
         height (int, optional): Height of output in pixels
-        filename (str, optional): Name of output file path. Defaults to current
+        filepath (str, optional): Name of output file path. Defaults to current
             render output path.
-        start_frame (int, optional): Defaults to current start frame.
-        end_frame (int, optional): Defaults to current end frame.
-        step_frame (int, optional): Defaults to 1.
-        sound (str, optional):  Specify the sound node to be used during
-            playblast. When None (default) no sound will be used.
         isolate (list): List of nodes to isolate upon capturing
         maintain_aspect_ratio (bool, optional): Modify height in order to
             maintain aspect ratio.
         overwrite (bool, optional): Whether or not to overwrite if file
             already exists. If disabled and file exists and error will be
             raised.
-        image_settings (dict, optional): Supplied image settings for render,
-            using `ImageSettings`
         display_options (dict, optional): Supplied display options for render
     """
 
@@ -66,24 +55,31 @@ def capture(
         ratio = scene.render.resolution_x / scene.render.resolution_y
         height = round(width / ratio)
 
+    # Get filepath.
+    if filepath is None:
+        filepath = scene.render.filepath
+
     # Get frame range.
-    if start_frame is None:
-        start_frame = scene.frame_start
-    if end_frame is None:
-        end_frame = scene.frame_end
-    if step_frame is None:
-        step_frame = 1
-    frame_range = (start_frame, end_frame, step_frame)
+    preset_settings.setdefault("frame_start", scene.frame_start)
+    preset_settings.setdefault("frame_end", scene.frame_end)
+    preset_settings.setdefault("frame_step", scene.frame_step)
 
-    if filename is None:
-        filename = scene.render.filepath
+    # Get render settings.
+    preset_settings.setdefault("render", {})
+    preset_settings["render"].update(
+        {
+            "filepath": "{}.".format(filepath.rstrip(".")),
+            "resolution_x": width,
+            "resolution_y": height,
+            "use_overwrite": overwrite,
+        }
+    )
 
-    render_options = {
-        "filepath": "{}.".format(filename.rstrip(".")),
-        "resolution_x": width,
-        "resolution_y": height,
-        "use_overwrite": overwrite,
-    }
+    # Move image_settings into render options.
+    # NOTE: That fix deprecated image_settings argument.
+    preset_settings["render"].setdefault(
+        "image_settings", preset_settings.get("image_settings", {})
+    )
 
     with contextlib.ExitStack() as stack:
         stack.enter_context(maintained_time())
@@ -94,9 +90,7 @@ def capture(
         applied_view(window, camera, isolate, focus, options=display_options)
 
         stack.enter_context(maintain_camera(window, camera))
-        stack.enter_context(applied_frame_range(window, *frame_range))
-        stack.enter_context(applied_render_options(window, render_options))
-        stack.enter_context(applied_image_settings(window, image_settings))
+        stack.enter_context(applied_preset_settings(window, preset_settings))
 
         with context_override(window=window):
             bpy.ops.render.opengl(
@@ -107,21 +101,7 @@ def capture(
                 view_context=True,
             )
 
-    return filename
-
-
-ImageSettings = {
-    "file_format": "FFMPEG",
-    "color_mode": "RGB",
-    "ffmpeg": {
-        "format": "QUICKTIME",
-        "use_autosplit": False,
-        "codec": "H264",
-        "constant_rate_factor": "MEDIUM",
-        "gopsize": 18,
-        "use_max_b_frames": False,
-    },
-}
+    return filepath
 
 
 def isolate_objects(window, objects, focus=None):
@@ -149,12 +129,29 @@ def isolate_objects(window, objects, focus=None):
     deselect_all()
 
 
-def _apply_options(entity, options):
-    for option, value in options.items():
-        if isinstance(value, dict):
-            _apply_options(getattr(entity, option), value)
+def _apply_settings(entity, settings):
+    for option, value in settings.items():
+        if hasattr(entity, option):
+            if isinstance(value, dict):
+                _apply_settings(getattr(entity, option), value)
+            else:
+                setattr(entity, option, value)
+
+
+def _get_current_settings(entity, settings):
+    current_settings = {}
+    for option in settings.copy():
+        if hasattr(entity, option):
+            if isinstance(settings[option], dict):
+                current_settings[option] = _get_current_settings(
+                    getattr(entity, option), settings[option]
+                )
+            else:
+                current_settings[option] = getattr(entity, option)
         else:
-            setattr(entity, option, value)
+            settings.pop(option)
+
+    return current_settings
 
 
 def applied_view(window, camera, isolate=None, focus=None, options=None):
@@ -175,7 +172,7 @@ def applied_view(window, camera, isolate=None, focus=None, options=None):
         space.region_3d.view_perspective = "CAMERA"
 
     if isinstance(options, dict):
-        _apply_options(space, options)
+        _apply_settings(space, options)
     else:
         space.shading.type = "SOLID"
         space.shading.color_type = "MATERIAL"
@@ -184,88 +181,20 @@ def applied_view(window, camera, isolate=None, focus=None, options=None):
 
 
 @contextlib.contextmanager
-def applied_frame_range(window, start, end, step):
-    """Context manager for setting frame range."""
-    # Store current frame range
-    current_frame_start = window.scene.frame_start
-    current_frame_end = window.scene.frame_end
-    current_frame_step = window.scene.frame_step
-    # Apply frame range
-    window.scene.frame_start = start
-    window.scene.frame_end = end
-    window.scene.frame_step = step
-    try:
-        yield
-    finally:
-        # Restore frame range
-        window.scene.frame_start = current_frame_start
-        window.scene.frame_end = current_frame_end
-        window.scene.frame_step = current_frame_step
-
-
-@contextlib.contextmanager
-def applied_render_options(window, options):
-    """Context manager for setting render options."""
-    render = window.scene.render
+def applied_preset_settings(window, settings):
+    """Context manager for setting options."""
 
     # Store current settings
-    original = {}
-    for opt in options.copy():
-        try:
-            original[opt] = getattr(render, opt)
-        except ValueError:
-            options.pop(opt)
+    old_settings = _get_current_settings(window.scene, settings)
 
     # Apply settings
-    _apply_options(render, options)
+    _apply_settings(window.scene, settings)
 
     try:
         yield
     finally:
         # Restore previous settings
-        _apply_options(render, original)
-
-
-@contextlib.contextmanager
-def applied_image_settings(window, options):
-    """Context manager to override image settings."""
-
-    options = options or ImageSettings.copy()
-    ffmpeg = options.pop("ffmpeg", {})
-    render = window.scene.render
-
-    # Store current image settings
-    original = {}
-    for opt in options.copy():
-        try:
-            original[opt] = getattr(render.image_settings, opt)
-        except ValueError:
-            options.pop(opt)
-
-    # Store current ffmpeg settings
-    original_ffmpeg = {}
-    for opt in ffmpeg.copy():
-        try:
-            original_ffmpeg[opt] = getattr(render.ffmpeg, opt)
-        except ValueError:
-            ffmpeg.pop(opt)
-
-    # Apply image settings
-    for opt, value in options.items():
-        setattr(render.image_settings, opt, value)
-
-    # Apply ffmpeg settings
-    for opt, value in ffmpeg.items():
-        setattr(render.ffmpeg, opt, value)
-
-    try:
-        yield
-    finally:
-        # Restore previous settings
-        for opt, value in original.items():
-            setattr(render.image_settings, opt, value)
-        for opt, value in original_ffmpeg.items():
-            setattr(render.ffmpeg, opt, value)
+        _apply_settings(window.scene, old_settings)
 
 
 @contextlib.contextmanager
