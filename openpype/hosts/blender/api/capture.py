@@ -25,26 +25,31 @@ def capture(
     """Playblast in an independent windows
 
     Arguments:
-        camera (str, optional): Name of camera, defaults to "Camera"
+        camera (str, optional): Name of the camera.
+            Defaults to current scene camera.
         width (int, optional): Width of output in pixels
         height (int, optional): Height of output in pixels
         filepath (str, optional): Name of output file path. Defaults to current
             render output path.
-        isolate (list): List of nodes to isolate upon capturing
+        isolate (list, optional): List of nodes to isolate upon capturing
         maintain_aspect_ratio (bool, optional): Modify height in order to
             maintain aspect ratio.
         overwrite (bool, optional): Whether or not to overwrite if file
             already exists. If disabled and file exists and error will be
-            raised.
+            raised. Default to False.
         display_options (dict, optional): Supplied display options for render
+        
+    Returns:
+        str: The output file path.
     """
 
     scene = bpy.context.scene
-    camera = camera or "Camera"
+    if not camera and scene.camera:
+        camera = scene.camera.name
 
     # Ensure camera exists.
     if camera not in scene.objects and camera != "AUTO":
-        raise RuntimeError("Camera does not exist: {0}".format(camera))
+        raise RuntimeError(f"Camera does not exist: {camera}")
 
     # Ensure resolution.
     if width and height:
@@ -68,7 +73,7 @@ def capture(
     preset_settings.setdefault("render", {})
     preset_settings["render"].update(
         {
-            "filepath": "{}.".format(filepath.rstrip(".")),
+            "filepath": f"{filepath.rstrip('.')}.",
             "resolution_x": width,
             "resolution_y": height,
             "use_overwrite": overwrite,
@@ -89,7 +94,7 @@ def capture(
 
         applied_view(window, camera, isolate, focus, options=display_options)
 
-        stack.enter_context(maintain_camera(window, camera))
+        stack.enter_context(applied_camera(window, camera))
         stack.enter_context(applied_preset_settings(window, preset_settings))
 
         with context_override(window=window):
@@ -105,31 +110,41 @@ def capture(
 
 
 def isolate_objects(window, objects, focus=None):
-    """Isolate selection"""
+    """Isolate selection
+    
+    Arguments:
+        objects (list, optional): List of objects to be isolate in viewport.
+        focus (list, optional): List of objects used for focus view.
+    """
 
+    # Hide all scene objects excepte given object liste to be isolate.
     for obj in bpy.context.scene.objects:
         try:
             obj.hide_set(obj not in objects)
         except RuntimeError:
             continue
 
+    # Select objects to center the view in front axis.
     deselect_all()
-
     focus = focus or objects
     for obj in focus:
         try:
             obj.select_set(True)
         except RuntimeError:
             continue
-
     with context_override(selected=focus, window=window):
         bpy.ops.view3d.view_axis(type="FRONT")
         bpy.ops.view3d.view_selected(use_all_regions=False)
-
     deselect_all()
 
 
 def _apply_settings(entity, settings):
+    """Apply settings for given entity.
+    
+    Arguments:
+        entity (bpy.types.bpy_struct): The entity.
+        settings (dict): Dict of settings.
+    """
     for option, value in settings.items():
         if hasattr(entity, option):
             if isinstance(value, dict):
@@ -139,8 +154,17 @@ def _apply_settings(entity, settings):
 
 
 def _get_current_settings(entity, settings):
+    """Get current settings for given entity.
+
+    Arguments:
+        entity (bpy.types.bpy_struct): The entity.
+        settings (dict): Dict of settings.
+        
+    Returns:
+        dict: The current settings for the entity.
+    """
     current_settings = {}
-    for option in settings.copy():
+    for option in settings:
         if hasattr(entity, option):
             if isinstance(settings[option], dict):
                 current_settings[option] = _get_current_settings(
@@ -148,14 +172,22 @@ def _get_current_settings(entity, settings):
                 )
             else:
                 current_settings[option] = getattr(entity, option)
-        else:
-            settings.pop(option)
 
     return current_settings
 
 
 def applied_view(window, camera, isolate=None, focus=None, options=None):
-    """Apply view options to window."""
+    """Apply view options to window.
+    
+    Arguments:
+        window (bpy.types.Window): The Blender active window.
+        camera (str): The camera name to set as active camera.
+            Use AUTO as special value to use centered orthographic view.
+        isolate (list, optional): List of objects to be isolate in viewport.
+        focus (list, optional): List of objects used for focus view
+            if argument camera is AUTO.
+        options (dict, optional): The display options.
+    """
     # Change area of window to 3D view
     area = window.screen.areas[0]
     area.ui_type = "VIEW_3D"
@@ -182,7 +214,12 @@ def applied_view(window, camera, isolate=None, focus=None, options=None):
 
 @contextlib.contextmanager
 def applied_preset_settings(window, settings):
-    """Context manager for setting options."""
+    """Context manager to override Blender settings.
+    
+    Arguments:
+        window (bpy.types.Window): The Blender active window.
+        settings (dict): The settings to apply.
+    """
 
     # Store current settings
     old_settings = _get_current_settings(window.scene, settings)
@@ -198,8 +235,13 @@ def applied_preset_settings(window, settings):
 
 
 @contextlib.contextmanager
-def maintain_camera(window, camera):
-    """Context manager to override camera."""
+def applied_camera(window, camera):
+    """Context manager to override camera.
+    
+    Arguments:
+        window (bpy.types.Window): The Blender active window.
+        camera (str): The camera name to set as active camera.
+    """
     current_camera = window.scene.camera
     if camera in window.scene.objects:
         window.scene.camera = window.scene.objects.get(camera)
