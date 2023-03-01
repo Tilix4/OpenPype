@@ -178,6 +178,14 @@ def build_layout(project_name, asset_name):
         if obj.type == "CAMERA":
             obj.select_set(True)
             break
+    else:
+        # Create camera if there are no camera from loaded casting.
+        camera_name = f"{asset_name}_cameraMain"
+        camera = bpy.data.cameras.new(camera_name)
+        obj = bpy.data.objects.new(camera_name, object_data=camera)
+        bpy.context.scene.collection.objects.link(obj)
+        obj.select_set(True)
+
     create_instance("CreateCamera", "cameraMain", useSelection=True)
 
     # Select camera from cameraMain instance to link with the review.
@@ -189,8 +197,9 @@ def build_layout(project_name, asset_name):
     create_instance("CreateReview", "reviewMain", useSelection=True)
 
     # load the board mov as image background linked into the camera.
-    # TODO when fixed
-    # load_subset(project_name, asset_name, "BoardReview", "Background", "mov")
+    load_subset(
+        project_name, asset_name, "BoardReference", "Background", "mov"
+    )
 
 
 def build_anim(project_name, asset_name):
