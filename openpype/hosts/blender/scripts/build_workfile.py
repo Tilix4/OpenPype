@@ -237,7 +237,10 @@ def build_layout(project_name, asset_name):
         if env_asset_name:
             # Load camera published at environment task
             cam_container, _cam_datablocks = load_subset(
-                project_name, env_asset_name, "cameraMain", "AppendCamera"
+                project_name,
+                env_asset_name,
+                "cameraMain",
+                "AppendCameraLoader"
             )
 
             # Make cam container publishable
@@ -301,7 +304,7 @@ def build_anim(project_name, asset_name):
         asset_name (str):  The current asset name from OpenPype Session.
     """
     layout_container, _layout_datablocks = load_subset(
-        project_name, asset_name, "layoutMain", "Link"
+        project_name, asset_name, "layoutMain", "LinkLayoutLoader"
     )
 
     # Make container publishable, expose its content
@@ -319,7 +322,7 @@ def build_anim(project_name, asset_name):
 
     # Load camera
     cam_container, _cam_datablocks = load_subset(
-        project_name, asset_name, "cameraMain", "AppendCamera"
+        project_name, asset_name, "cameraMain", "AppendCameraLoader"
     )
 
     # Clean cam container from review collection
@@ -380,12 +383,13 @@ def build_render(project_name, asset_name):
         asset_name (str):  The current asset name from OpenPype Session.
     """
 
-    if not load_subset(project_name, asset_name, "layoutFromAnim", "Link"):
-        load_subset(project_name, asset_name, "layoutMain", "Append")
-    if not load_subset(project_name, asset_name, "cameraFromAnim", "Link"):
-        load_subset(project_name, asset_name, "cameraMain", "Link")
+    load_subset(project_name, asset_name, "layoutMain", "AppendLayoutLoader")
+    load_subset(project_name, asset_name, "cameraMain", "LinkCameraLoader")
+
+    # TODO : Because subset animationMain no longer be used,
+    # we need to load all animation subsets from the asset.
     _anim_container, anim_datablocks = load_subset(
-        project_name, asset_name, "animationMain", "Link"
+        project_name, asset_name, "animationMain", "LinkAnimationLoader"
     )
 
     # Try to assign linked actions by parsing their name
