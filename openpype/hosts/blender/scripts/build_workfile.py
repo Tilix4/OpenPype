@@ -111,11 +111,13 @@ def load_casting(project_name, shot_name) -> Set[OpenpypeContainer]:
         for _ in range(actor["nb_occurences"]):
             if actor["asset_type_name"] == "Environment":
                 subset_name = "setdressMain"
+                loader_name = "LinkSetdressLoader"
             else:
                 subset_name = "rigMain"
+                loader_name = "LinkRigLoader"
             try:
                 container, _datablocks = load_subset(
-                    project_name, actor["asset_name"], subset_name, "Link"
+                    project_name, actor["asset_name"], subset_name, loader_name
                 )
                 containers.append(container)
                 sleep(1)  # TODO blender is too fast for windows
@@ -152,7 +154,7 @@ def build_look(project_name, asset_name):
         asset_name (str):  The current asset name from OpenPype Session.
     """
     create_instance("CreateLook", "lookMain")
-    load_subset(project_name, asset_name, "modelMain", "Append")
+    load_subset(project_name, asset_name, "modelMain", "AppendModelLoader")
 
 
 def build_rig(project_name, asset_name):
@@ -166,7 +168,7 @@ def build_rig(project_name, asset_name):
     bpy.context.object.name = f"{asset_name}_armature"
     bpy.context.object.data.name = f"{asset_name}_armature"
     create_instance("CreateRig", "rigMain", useSelection=True)
-    load_subset(project_name, asset_name, "modelMain", "Append")
+    load_subset(project_name, asset_name, "modelMain", "AppendModelLoader")
 
 
 def create_gdeformer_collection(parent_collection: bpy.types.Collection):
@@ -221,6 +223,7 @@ def build_layout(project_name, asset_name):
 
     # Try to load camera from environment's setdress
     camera_collection = None
+    env_asset_name = None
     try:
         # Get env asset name
         env_asset_name = next(
@@ -234,7 +237,7 @@ def build_layout(project_name, asset_name):
         if env_asset_name:
             # Load camera published at environment task
             cam_container, _cam_datablocks = load_subset(
-                project_name, env_asset_name, "cameraMain", "Append"
+                project_name, env_asset_name, "cameraMain", "AppendCamera"
             )
 
             # Make cam container publishable
@@ -279,10 +282,15 @@ def build_layout(project_name, asset_name):
     load_subset(
         project_name, asset_name, "BoardReference", "Background", "mov"
     )
-    # load the concept reference as image reference in the scene.
-    load_subset(
-        project_name, asset_name, "ConceptReference", "Background", "jpg"
-    )
+    # load the concept reference of the environment as image background.
+    if env_asset_name:
+        load_subset(
+            project_name,
+            env_asset_name,
+            "ConceptReference",
+            "Background",
+            "jpg",
+        )
 
 
 def build_anim(project_name, asset_name):
