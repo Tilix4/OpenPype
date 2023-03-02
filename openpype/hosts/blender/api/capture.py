@@ -116,6 +116,7 @@ def isolate_objects(window, objects, focus=None):
     in optional argument.
     
     Arguments:
+        window (bpy.types.Window): The Blender active window. 
         objects (list, optional): List of objects to be isolate in viewport.
         focus (list, optional): List of objects used for focus view.
     """
