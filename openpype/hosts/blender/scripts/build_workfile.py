@@ -279,6 +279,10 @@ def build_layout(project_name, asset_name):
     load_subset(
         project_name, asset_name, "BoardReference", "Background", "mov"
     )
+    # load the concept reference as image reference in the scene.
+    load_subset(
+        project_name, asset_name, "ConceptReference", "Background", "jpg"
+    )
 
 
 def build_anim(project_name, asset_name):
