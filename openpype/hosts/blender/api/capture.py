@@ -38,7 +38,9 @@ def capture(
             already exists. If disabled and file exists and error will be
             raised. Default to False.
         display_options (dict, optional): Supplied display options for render
-        
+        **preset_settings: Arbitrary keyword arguments for scene and render
+            settings overrides.
+
     Returns:
         str: The output file path.
     """
@@ -110,7 +112,8 @@ def capture(
 
 
 def isolate_objects(window, objects, focus=None):
-    """Isolate selection
+    """Isolate selected objects and set focus on this one or given objects list
+    in optional argument.
     
     Arguments:
         objects (list, optional): List of objects to be isolate in viewport.
