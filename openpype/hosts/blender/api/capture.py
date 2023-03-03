@@ -11,6 +11,9 @@ from .plugin import deselect_all, context_override
 
 
 def capture(
+    opengl=True,
+    animation=True,
+    write_still=False,
     camera=None,
     width=None,
     height=None,
@@ -25,6 +28,12 @@ def capture(
     """Playblast in an independent windows
 
     Arguments:
+        opengl (bool, optional): Whether or not to use OpenGL render.
+            Defaults to True.
+        animation (bool, optional): Whether or not to render animation.
+            Defaults to True.
+        write_still (bool, optional): Whether or not to write still image.
+            Defaults to False.
         camera (str, optional): Name of the camera.
             Defaults to current scene camera.
         width (int, optional): Width of output in pixels
@@ -100,13 +109,20 @@ def capture(
         stack.enter_context(applied_preset_settings(window, preset_settings))
 
         with context_override(window=window):
-            bpy.ops.render.opengl(
-                animation=True,
-                render_keyed_only=False,
-                sequencer=False,
-                write_still=False,
-                view_context=True,
-            )
+            if opengl:
+                bpy.ops.render.opengl(
+                    animation=animation,
+                    render_keyed_only=False,
+                    sequencer=False,
+                    write_still=write_still,
+                    view_context=True,
+                )
+            else:
+                bpy.ops.render.render(
+                    animation=animation,
+                    write_still=write_still,
+                    use_viewport=False,
+                )
 
     return filepath
 
