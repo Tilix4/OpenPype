@@ -594,6 +594,7 @@ def build_anim(project_name, asset_name):
     # load the board mov as image background linked into the camera
     load_subset(project_name, board_repre, "Background")
 
+
 def build_lipsync(project_name, asset_name):
     """Build lipsync workfile.
 
@@ -635,7 +636,6 @@ def build_lipsync(project_name, asset_name):
 
     except RuntimeError:
         containers = {}
-
 
 
 def build_render(project_name, asset_name):
