@@ -595,47 +595,47 @@ def build_anim(project_name, asset_name):
     load_subset(project_name, board_repre, "Background")
 
 
-def build_lipsync(project_name, asset_name):
+def build_lipsync(project_name, shot_name):
     """Build lipsync workfile.
 
     Args:
         project_name (str):  The current project name from OpenPype Session.
         asset_name (str):  The current asset name from OpenPype Session.
     """
-    try:
-        modules_manager = ModulesManager()
-        kitsu_module = modules_manager.modules_by_name.get('kitsu')
-        if not kitsu_module or not kitsu_module.enabled:
-            return
+    # Check if kitsu_module is available
+    kitsu_module = ModulesManager().modules_by_name.get("kitsu")
+    if not kitsu_module or not kitsu_module.enabled:
+        return
 
-        import gazu
+    import gazu
 
-        gazu.client.set_host(os.environ['KITSU_SERVER'])
-        gazu.log_in(os.environ["KITSU_LOGIN"], os.environ["KITSU_PWD"])
+    # Connect to gazu
+    gazu.client.set_host(os.environ["KITSU_SERVER"])
+    gazu.log_in(os.environ["KITSU_LOGIN"], os.environ["KITSU_PWD"])
 
-        shot_data = get_asset_by_name(
-            project_name, asset_name, fields=['data']
-        )['data']
+    # Get casting
+    casting = gazu.casting.get_shot_casting(
+        gazu.shot.get_shot(
+            get_asset_by_name(project_name, shot_name, fields=["data"])[
+                "data"
+            ]["zou"]["id"]
+        )
+    )
 
-        shot = gazu.shot.get_shot(shot_data['zou']['id'])
-        casting = gazu.casting.get_shot_casting(shot)
-
-        containers = set()
-        for actor in casting:
-            if actor['asset_type_name'] == 'Character':
-
+    for actor in casting:
+        for _ in range(actor["nb_occurences"]):
+            if actor["asset_type_name"] == "Character":
                 try:
-                    container, _datablocks = load_subset(
-                        project_name, actor['asset_name'], 'rigMain', 'Link'
+                    load_subset(
+                        project_name,
+                        actor["asset_name"],
+                        "rigMain",
+                        "LinkRigLoader",
                     )
-                    containers.add(container)
                 except TypeError:
                     print(f"Cannot load {actor['asset_name']} {'rigMain'}.")
 
-        gazu.log_out()
-
-    except RuntimeError:
-        containers = {}
+    gazu.log_out()
 
 
 def build_render(project_name, asset_name):
