@@ -594,6 +594,49 @@ def build_anim(project_name, asset_name):
     # load the board mov as image background linked into the camera
     load_subset(project_name, board_repre, "Background")
 
+def build_lipsync(project_name, asset_name):
+    """Build lipsync workfile.
+
+    Args:
+        project_name (str):  The current project name from OpenPype Session.
+        asset_name (str):  The current asset name from OpenPype Session.
+    """
+    try:
+        modules_manager = ModulesManager()
+        kitsu_module = modules_manager.modules_by_name.get('kitsu')
+        if not kitsu_module or not kitsu_module.enabled:
+            return
+
+        import gazu
+
+        gazu.client.set_host(os.environ['KITSU_SERVER'])
+        gazu.log_in(os.environ["KITSU_LOGIN"], os.environ["KITSU_PWD"])
+
+        shot_data = get_asset_by_name(
+            project_name, asset_name, fields=['data']
+        )['data']
+
+        shot = gazu.shot.get_shot(shot_data['zou']['id'])
+        casting = gazu.casting.get_shot_casting(shot)
+
+        containers = set()
+        for actor in casting:
+            if actor['asset_type_name'] == 'Character':
+
+                try:
+                    container, _datablocks = load_subset(
+                        project_name, actor['asset_name'], 'rigMain', 'Link'
+                    )
+                    containers.add(container)
+                except TypeError:
+                    print(f"Cannot load {actor['asset_name']} {'rigMain'}.")
+
+        gazu.log_out()
+
+    except RuntimeError:
+        containers = {}
+
+
 
 def build_render(project_name, asset_name):
     """Build render workfile.
@@ -658,6 +701,9 @@ def build_workfile():
 
     elif task_name in ("anim", "animation"):
         build_anim(project_name, asset_name)
+
+    elif task_name == "lipsync":
+        build_lipsync(project_name, asset_name)
 
     elif task_name in ("lighting", "light", "render", "rendering"):
         build_render(project_name, asset_name)
