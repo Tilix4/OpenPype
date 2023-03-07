@@ -62,16 +62,15 @@ class CollectReview(pyblish.api.InstancePlugin):
             and obj.type in ("MESH", "CURVE", "SURFACE")
         ]
 
-        if not instance.data.get("remove"):
-            instance.data.update(
-                {
-                    "subset": instance.data.get("subset"),
-                    "review_camera": camera,
-                    "frameStart": instance.context.data["frameStart"],
-                    "frameEnd": instance.context.data["frameEnd"],
-                    "fps": instance.context.data["fps"],
-                    "isolate": isolate_objects,
-                    "audio": audio_tracks,
-                }
-            )
-            self.log.debug(f"instance data: {instance.data}")
+        instance.data.update(
+            {
+                "subset": instance.data.get("subset"),
+                "review_camera": camera,
+                "frameStart": instance.context.data["frameStart"],
+                "frameEnd": instance.context.data["frameEnd"],
+                "fps": instance.context.data["fps"],
+                "isolate": isolate_objects,
+                "audio": audio_tracks,
+            }
+        )
+        self.log.debug(f"instance data: {instance.data}")
