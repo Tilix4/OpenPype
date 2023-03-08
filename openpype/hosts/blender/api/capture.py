@@ -5,6 +5,7 @@ Playblasting with independent viewport, camera and display options
 """
 import contextlib
 import bpy
+from pathlib import Path
 
 from .lib import maintained_time, maintained_selection, maintained_visibility
 from .plugin import deselect_all, context_override
@@ -73,7 +74,9 @@ def capture(
 
     # Get filepath.
     if filepath is None:
-        filepath = scene.render.filepath
+        filepath = Path(scene.render.filepath)
+    else:
+        filepath = Path(filepath)
 
     # Get frame range.
     preset_settings.setdefault("frame_start", scene.frame_start)
@@ -84,12 +87,25 @@ def capture(
     preset_settings.setdefault("render", {})
     preset_settings["render"].update(
         {
-            "filepath": f"{filepath.rstrip('.')}.",
             "resolution_x": width,
             "resolution_y": height,
             "use_overwrite": overwrite,
         }
     )
+
+    # Set filepath, with extension if not set
+    if filepath.suffix:
+        preset_settings["render"].update(
+            {
+                "file_format": filepath.suffix[1:].upper(),
+                "use_file_extension": False,
+                "filepath": filepath.as_posix(),
+            }
+        )
+    else:
+        preset_settings["render"].update(
+            {"use_file_extension": True, "filepath": filepath.as_posix() + "."}
+        )
 
     # Move image_settings into render options.
     # NOTE: That fix deprecated image_settings argument.
@@ -130,9 +146,9 @@ def capture(
 def isolate_objects(window, objects, focus=None):
     """Isolate selected objects and set focus on this one or given objects list
     in optional argument.
-    
+
     Arguments:
-        window (bpy.types.Window): The Blender active window. 
+        window (bpy.types.Window): The Blender active window.
         objects (list, optional): List of objects to be isolate in viewport.
         focus (list, optional): List of objects used for focus view.
     """
@@ -160,7 +176,7 @@ def isolate_objects(window, objects, focus=None):
 
 def _apply_settings(entity, settings):
     """Apply settings for given entity.
-    
+
     Arguments:
         entity (bpy.types.bpy_struct): The entity.
         settings (dict): Dict of settings.
@@ -179,7 +195,7 @@ def _get_current_settings(entity, settings):
     Arguments:
         entity (bpy.types.bpy_struct): The entity.
         settings (dict): Dict of settings.
-        
+
     Returns:
         dict: The current settings for the entity.
     """
@@ -198,7 +214,7 @@ def _get_current_settings(entity, settings):
 
 def applied_view(window, camera, isolate=None, focus=None, options=None):
     """Apply view options to window.
-    
+
     Arguments:
         window (bpy.types.Window): The Blender active window.
         camera (str): The camera name to set as active camera.
@@ -235,7 +251,7 @@ def applied_view(window, camera, isolate=None, focus=None, options=None):
 @contextlib.contextmanager
 def applied_preset_settings(window, settings):
     """Context manager to override Blender settings.
-    
+
     Arguments:
         window (bpy.types.Window): The Blender active window.
         settings (dict): The settings to apply.
@@ -257,7 +273,7 @@ def applied_preset_settings(window, settings):
 @contextlib.contextmanager
 def applied_camera(window, camera):
     """Context manager to override camera.
-    
+
     Arguments:
         window (bpy.types.Window): The Blender active window.
         camera (str): The camera name to set as active camera.
