@@ -8,14 +8,12 @@ class IntegrateKitsuReview(pyblish.api.InstancePlugin):
 
     order = pyblish.api.IntegratorOrder + 0.01
     label = "Kitsu Review"
-    # families = ["kitsu"]
+    families = ["review"]
     optional = True
 
     def process(self, instance):
-
-        context = instance.context
-        task = context.data["kitsu_task"]
-        comment = context.data.get("kitsu_comment")
+        task = instance.data["kitsu_task"]["id"]
+        comment = instance.data.get("kitsu_comment")
 
         # Check comment has been created
         if not comment:
@@ -34,6 +32,6 @@ class IntegrateKitsuReview(pyblish.api.InstancePlugin):
             self.log.debug("Found review at: {}".format(review_path))
 
             gazu.task.add_preview(
-                task, comment, review_path, normalize_movie=True
+                task, comment["id"], review_path, normalize_movie=True
             )
             self.log.info("Review upload on comment")
