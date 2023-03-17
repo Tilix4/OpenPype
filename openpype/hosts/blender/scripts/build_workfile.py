@@ -1,6 +1,6 @@
 import os
 from time import sleep
-from typing import Set
+from typing import List, Set
 import bpy
 
 from openpype.client import (
@@ -10,6 +10,7 @@ from openpype.client import (
     get_representations,
 )
 from openpype.hosts.blender.api.properties import OpenpypeContainer
+from openpype.lib.local_settings import get_local_site_id
 from openpype.modules import ModulesManager
 from openpype.pipeline import (
     legacy_io,
@@ -20,23 +21,18 @@ from openpype.pipeline import (
 )
 from openpype.pipeline.create import get_legacy_creator_by_name
 
-
-def load_subset(
-    project_name, asset_name, subset_name, loader_type=None, ext="blend"
-):
-    """Load the representation of the last version of subset.
+def download_subset(project_name, asset_name, subset_name, ext="blend"):
+    """Download the representation of the last version of subset on current site.
 
     Args:
         project_name (str): The project name.
         asset_name (str): The asset name.
         subset_name (str): The subset name.
-        loader_type (str, optional): The loader name. Defaults to None.
         ext (str, optional): The representation extension. Defaults to "blend".
 
     Returns:
         The return of the `load_container()` function.
     """
-
     asset = get_asset_by_name(project_name, asset_name, fields=["_id"])
     if not asset:
         return
@@ -68,12 +64,68 @@ def load_subset(
     )
     if not representation:
         return
+    
+    # Download representation on site
+    modules_manager = ModulesManager()
+    sync_server = modules_manager.get("sync_server")
+    local_site_id = get_local_site_id()
+    sync_server.add_site(
+        project_name,
+        representation["_id"],
+        local_site_id,
+        force=True,
+        priority=99,
+        reset_timer=True,
+    )
+
+    return representation
+
+def wait_for_download(project_name, representations: List[dict]):
+    # Wait for download
+    modules_manager = ModulesManager()
+    sync_server = modules_manager.get("sync_server")
+    local_site_id = get_local_site_id()
+    for representation in representations:
+        while not sync_server.is_representation_on_site(
+            project_name, representation["_id"], local_site_id
+        ):
+            sleep(5)
+
+
+def load_subset(
+    project_name, representation, loader_type=None
+):
+    """Load the representation of the last version of subset.
+
+    Args:
+        project_name (str): The project name.
+        loader_type (str, optional): The loader name. Defaults to None.
+
+    Returns:
+        The return of the `load_container()` function.
+    """
 
     all_loaders = discover_loader_plugins(project_name=project_name)
     loaders = loaders_from_representation(all_loaders, representation)
     for loader in loaders:
         if loader_type in loader.__name__:
             return load_container(loader, representation)
+        
+def download_and_load_subset(project_name, asset_name, subset_name, loader_type=None):
+    """Download and load the representation of the last version of subset.
+
+    Args:
+        project_name (str): The project name.
+        asset_name (str): The asset name.
+        subset_name (str): The subset name.
+        loader_type (str, optional): The loader name. Defaults to None.
+
+    Returns:
+        The return of the `load_container()` function.
+    """
+    representation = download_subset(project_name, asset_name, subset_name)
+    wait_for_download(project_name, [representation])
+    return load_subset(project_name, representation, loader_type)
 
 
 def create_instance(creator_name, instance_name, **options):
@@ -106,7 +158,7 @@ def load_casting(project_name, shot_name) -> Set[OpenpypeContainer]:
     shot = gazu.shot.get_shot(shot_data["zou"]["id"])
     casting = gazu.casting.get_shot_casting(shot)
 
-    containers = []
+    representations = []
     for actor in casting:
         for _ in range(actor["nb_occurences"]):
             if actor["asset_type_name"] == "Environment":
@@ -115,14 +167,24 @@ def load_casting(project_name, shot_name) -> Set[OpenpypeContainer]:
             else:
                 subset_name = "rigMain"
                 loader_name = "LinkRigLoader"
-            try:
-                container, _datablocks = load_subset(
-                    project_name, actor["asset_name"], subset_name, loader_name
-                )
-                containers.append(container)
-                sleep(1)  # TODO blender is too fast for windows
-            except TypeError:
-                print(f"Cannot load {actor['asset_name']} {subset_name}.")
+            
+            # Download subset
+            representations.append(download_subset(project_name, actor["asset_name"], subset_name))
+
+    wait_for_download(project_name, representations)
+
+    # Load downloaded subsets
+    containers = []
+    for representation in representations:
+        try:
+            
+            container, _datablocks = load_subset(
+                project_name, representation, loader_name
+            )
+            containers.append(container)
+            sleep(1)  # TODO blender is too fast for windows
+        except TypeError:
+            print(f"Cannot load {actor['asset_name']} {subset_name}.")
 
     gazu.log_out()
 
@@ -141,7 +203,7 @@ def build_model(project_name, asset_name):
     bpy.context.object.data.name = f"{asset_name}_model"
     create_instance("CreateModel", "modelMain", useSelection=True)
     # load the concept reference as image reference in the scene.
-    load_subset(
+    download_and_load_subset(
         project_name, asset_name, "ConceptReference", "Reference", "jpg"
     )
 
@@ -154,7 +216,7 @@ def build_look(project_name, asset_name):
         asset_name (str):  The current asset name from OpenPype Session.
     """
     create_instance("CreateLook", "lookMain")
-    load_subset(project_name, asset_name, "modelMain", "AppendModelLoader")
+    download_and_load_subset(project_name, asset_name, "modelMain", "AppendModelLoader")
 
 
 def build_rig(project_name, asset_name):
@@ -168,7 +230,7 @@ def build_rig(project_name, asset_name):
     bpy.context.object.name = f"{asset_name}_armature"
     bpy.context.object.data.name = f"{asset_name}_armature"
     create_instance("CreateRig", "rigMain", useSelection=True)
-    load_subset(project_name, asset_name, "modelMain", "AppendModelLoader")
+    download_and_load_subset(project_name, asset_name, "modelMain", "AppendModelLoader")
 
 
 def create_gdeformer_collection(parent_collection: bpy.types.Collection):
@@ -197,6 +259,7 @@ def build_layout(project_name, asset_name):
         project_name (str):  The current project name from OpenPype Session.
         asset_name (str):  The current asset name from OpenPype Session.
     """
+    # TODO download everything and then load everything
 
     layout_instance = create_instance("CreateLayout", "layoutMain")
 
