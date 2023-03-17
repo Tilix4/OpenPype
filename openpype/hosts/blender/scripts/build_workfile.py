@@ -306,6 +306,43 @@ def build_layout(project_name, asset_name):
             "jpg",
         )
 
+    # Setup cryptomatte
+    bpy.context.scene.view_layers["ViewLayer"].use_pass_cryptomatte_asset = True
+
+    for container in containers:
+        if container.get("avalon", {}).get("family") == "rig":
+            setup_character_compositing(container.name)
+    
+def setup_character_compositing(character_name):
+    scene = bpy.context.scene
+    scene.use_nodes = True
+
+    render_layers_node = scene.node_tree.nodes["Render Layers"]
+
+    # Create crypto node for character
+    crypto_node = scene.node_tree.nodes.new("CompositorNodeCryptomatteV2")
+    crypto_node.name = f"{character_name}_Cryptomatte"
+
+    # Link render layers to crypto node
+    scene.node_tree.links.new(
+        render_layers_node.outputs["Image"],
+        crypto_node.inputs["Image"],
+    )
+
+    # Set matte id by rig name
+    rig_name = None
+    for obj in bpy.data.collections[character_name].all_objects:
+        if obj.type == "ARMATURE":
+            rig_name = obj.name
+            break
+    
+    # If no rig found, print error and skip
+    if not rig_name:
+        print(f"Could not find rig for {character_name}")
+        return
+
+    crypto_node.matte_id = rig_name
+
 
 def build_anim(project_name, asset_name):
     """Build anim workfile.
