@@ -74,7 +74,6 @@ def download_subset(project_name, asset_name, subset_name, ext="blend"):
         project_name,
         representation["_id"],
         local_site_id,
-        force=True,
         priority=99,
     )
 
