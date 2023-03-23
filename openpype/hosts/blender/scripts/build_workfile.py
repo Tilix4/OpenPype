@@ -105,7 +105,7 @@ def wait_for_download(project_name, representations: List[dict]):
 
 
 def load_subset(project_name, representation, loader_type=None):
-    """Load the representation of the last version of subset.
+    """Load the representation of the subset last version.
 
     Args:
         project_name (str): The project name.
