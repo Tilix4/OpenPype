@@ -205,25 +205,46 @@ def create_instance(creator_name, instance_name, **options):
     )
 
 
-def load_casting(project_name, shot_name) -> Set[OpenpypeContainer]:
-    """Load casting from shot_name using kitsu api."""
+def get_kitsu_casting(project_name: str, shot_name: str) -> dict:
+    """Get casting from kitsu.
 
-    modules_manager = ModulesManager()
-    kitsu_module = modules_manager.modules_by_name.get("kitsu")
-    if not kitsu_module or not kitsu_module.enabled:
-        return
+    Args:
+        project_name (str): Current project name from OpenPype Session.
+        shot_name (str): Current shot name from OpenPype Session.
+
+    Returns:
+        dict: Kitsu casting.
+    """
+    # Check if kitsu_module is available
+    kitsu_module = ModulesManager().modules_by_name.get("kitsu")
+    assert kitsu_module and kitsu_module.enabled, "Kitsu module is unavailable"
 
     import gazu
 
+    # Connect to gazu
     gazu.client.set_host(os.environ["KITSU_SERVER"])
     gazu.log_in(os.environ["KITSU_LOGIN"], os.environ["KITSU_PWD"])
 
-    shot_data = get_asset_by_name(project_name, shot_name, fields=["data"])[
-        "data"
-    ]
+    # Get casting
+    casting = gazu.casting.get_shot_casting(
+        gazu.shot.get_shot(
+            get_asset_by_name(project_name, shot_name, fields=["data"])[
+                "data"
+            ]["zou"]["id"]
+        )
+    )
 
-    shot = gazu.shot.get_shot(shot_data["zou"]["id"])
-    casting = gazu.casting.get_shot_casting(shot)
+    # Logout from gazu
+    gazu.log_out()
+
+    return casting
+
+
+def load_casting(project_name, shot_name) -> Set[OpenpypeContainer]:
+    """Load casting from shot_name using kitsu api."""
+
+    casting = get_kitsu_casting(project_name, shot_name)
+    assert casting, "Failed to get kitsu casting"
 
     representations = []
     for actor in casting:
@@ -256,8 +277,6 @@ def load_casting(project_name, shot_name) -> Set[OpenpypeContainer]:
             print(
                 f"Cannot load {representation['context']['asset']} {representation['context']['subset']}."
             )
-
-    gazu.log_out()
 
     return containers
 
@@ -595,32 +614,16 @@ def build_anim(project_name, asset_name):
     load_subset(project_name, board_repre, "Background")
 
 
-def build_lipsync(project_name, shot_name):
+def build_lipsync(project_name: str, shot_name: str):
     """Build lipsync workfile.
 
     Args:
-        project_name (str):  The current project name from OpenPype Session.
-        asset_name (str):  The current asset name from OpenPype Session.
+        project_name (str):  Current project name from OpenPype Session.
+        shot_name (str):  Current shot name from OpenPype Session.
     """
-    # Check if kitsu_module is available
-    kitsu_module = ModulesManager().modules_by_name.get("kitsu")
-    if not kitsu_module or not kitsu_module.enabled:
-        return
 
-    import gazu
-
-    # Connect to gazu
-    gazu.client.set_host(os.environ["KITSU_SERVER"])
-    gazu.log_in(os.environ["KITSU_LOGIN"], os.environ["KITSU_PWD"])
-
-    # Get casting
-    casting = gazu.casting.get_shot_casting(
-        gazu.shot.get_shot(
-            get_asset_by_name(project_name, shot_name, fields=["data"])[
-                "data"
-            ]["zou"]["id"]
-        )
-    )
+    casting = get_kitsu_casting(project_name, shot_name)
+    assert casting, "Failed to get kitsu casting"
 
     for actor in casting:
         for _ in range(actor["nb_occurences"]):
@@ -634,8 +637,6 @@ def build_lipsync(project_name, shot_name):
                     )
                 except TypeError:
                     print(f"Cannot load {actor['asset_name']} {'rigMain'}.")
-
-    gazu.log_out()
 
 
 def build_render(project_name, asset_name):
