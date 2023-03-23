@@ -125,7 +125,7 @@ def load_subset(project_name, representation, loader_type=None):
 def download_and_load_subset(
     project_name, asset_name, subset_name, loader_type=None
 ):
-    """Download and load the representation of the last version of subset.
+    """Download and load the representation of the subset last version.
 
     Args:
         project_name (str): The project name.
