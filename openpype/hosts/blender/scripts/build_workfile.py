@@ -99,7 +99,7 @@ def wait_for_download(project_name, representations: List[dict]):
             for r in representations
             if r
         )
-        and time() - start < 60 * 5
+        and time() - start < 300
     ):
         sleep(5)
 
