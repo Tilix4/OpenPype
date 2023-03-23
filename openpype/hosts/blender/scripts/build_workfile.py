@@ -23,7 +23,7 @@ from openpype.pipeline.create import get_legacy_creator_by_name
 
 
 def download_subset(project_name, asset_name, subset_name, ext="blend"):
-    """Download the representation of the last version of subset on current site.
+    """Download the representation of the subset last version on current site.
 
     Args:
         project_name (str): The project name.
