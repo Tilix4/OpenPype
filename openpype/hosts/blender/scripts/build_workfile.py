@@ -240,8 +240,16 @@ def get_kitsu_casting(project_name: str, shot_name: str) -> dict:
     return casting
 
 
-def load_casting(project_name, shot_name) -> Set[OpenpypeContainer]:
-    """Load casting from shot_name using kitsu api."""
+def load_casting(project_name: str, shot_name: str) -> Set[OpenpypeContainer]:
+    """Load casting from shot_name using kitsu api.
+
+     Args:
+        project_name (str): Current project name from OpenPype Session.
+        shot_name (str): Current shot name from OpenPype Session.
+
+    Returns:
+        Set[OpenpypeContainer]: Casted assets containers.
+    """
 
     casting = get_kitsu_casting(project_name, shot_name)
     assert casting, "Failed to get kitsu casting"
