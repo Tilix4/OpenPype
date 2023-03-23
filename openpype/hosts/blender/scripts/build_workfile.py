@@ -1,6 +1,6 @@
 import os
 from time import sleep, time
-from typing import List, Set
+from typing import List, Set, Tuple
 import bpy
 
 from openpype.client import (
@@ -22,7 +22,9 @@ from openpype.pipeline import (
 from openpype.pipeline.create import get_legacy_creator_by_name
 
 
-def download_subset(project_name, asset_name, subset_name, ext="blend"):
+def download_subset(
+    project_name, asset_name, subset_name, ext="blend"
+) -> dict:
     """Download the representation of the subset last version on current site.
 
     Args:
@@ -32,7 +34,7 @@ def download_subset(project_name, asset_name, subset_name, ext="blend"):
         ext (str, optional): The representation extension. Defaults to "blend".
 
     Returns:
-        The return of the `load_container()` function.
+        dict: The subset representation.
     """
     asset = get_asset_by_name(project_name, asset_name, fields=["_id"])
     if not asset:
@@ -81,6 +83,12 @@ def download_subset(project_name, asset_name, subset_name, ext="blend"):
 
 
 def wait_for_download(project_name, representations: List[dict]):
+    """Wait for download of representations.
+
+    Args:
+        project_name (str): Project name.
+        representations (List[dict]): List of representations to wait for.
+    """
     # Get sync server
     modules_manager = ModulesManager()
     sync_server = modules_manager.get("sync_server")
@@ -104,15 +112,19 @@ def wait_for_download(project_name, representations: List[dict]):
         sleep(5)
 
 
-def load_subset(project_name, representation, loader_type=None):
+def load_subset(
+    project_name, representation, loader_type=None
+) -> Tuple[OpenpypeContainer, Set[bpy.types.ID]]:
     """Load the representation of the subset last version.
 
     Args:
         project_name (str): The project name.
+        representation (dict): The representation.
         loader_type (str, optional): The loader name. Defaults to None.
 
     Returns:
-        The return of the `load_container()` function.
+        Tuple[OpenpypeContainer, Set[bpy.types.ID]]:
+            (Container, Datablocks)
     """
 
     all_loaders = discover_loader_plugins(project_name=project_name)
@@ -124,7 +136,7 @@ def load_subset(project_name, representation, loader_type=None):
 
 def download_and_load_subset(
     project_name, asset_name, subset_name, loader_type=None
-):
+) -> Tuple[OpenpypeContainer, Set[bpy.types.ID]]:
     """Download and load the representation of the subset last version.
 
     Args:
@@ -134,7 +146,8 @@ def download_and_load_subset(
         loader_type (str, optional): The loader name. Defaults to None.
 
     Returns:
-        The return of the `load_container()` function.
+        Tuple[OpenpypeContainer, Set[bpy.types.ID]]:
+            (Container, Datablocks)
     """
     representation = download_subset(project_name, asset_name, subset_name)
     wait_for_download(project_name, [representation])
@@ -186,11 +199,7 @@ def load_casting(project_name, shot_name) -> Set[OpenpypeContainer]:
                 project_name, actor["asset_name"], subset_name
             )
             if representation:
-                representations.append(
-                    download_subset(
-                        project_name, actor["asset_name"], subset_name
-                    )
-                )
+                representations.append(representation)
 
     wait_for_download(project_name, representations)
 
