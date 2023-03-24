@@ -496,7 +496,7 @@ def build_anim(project_name, asset_name):
     )
 
     # load the board mov as image background linked into the camera
-    load_subset(project_name, board_repre, "Background", "mov")
+    load_subset(project_name, board_repre, "Background")
 
 
 def build_render(project_name, asset_name):
