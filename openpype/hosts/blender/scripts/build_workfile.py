@@ -346,8 +346,10 @@ def setup_character_compositing(
     Args:
         asset_name (str):  The current asset name from OpenPype Session.
         character_name (str):  The character to create compositing of.
-        source_compositing_nodegroup (bpy.types.NodeTree):  The source nodegroup to use for compositing.
-        input_image_node (bpy.types.Node):  The input image node to use for compositing.
+        source_compositing_nodegroup (bpy.types.NodeTree):  
+            The source nodegroup to use for compositing.
+        input_image_node (bpy.types.Node):  
+            The input image node to use for compositing.
 
     Returns:
         bpy.types.NodeTree:  The output image node.
@@ -357,10 +359,11 @@ def setup_character_compositing(
 
     # Get render layers node
     render_layer_node = scene.node_tree.nodes.get("Render Layers")
+    assert render_layer_node, "Could not find render layers node"
 
     # Set render layers node as input image node if not already set
     if not input_image_node:
-        input_image_node = scene.node_tree.nodes["Render Layers"]
+        input_image_node = render_layer_node
 
     # Create crypto node for character
     crypto_node = scene.node_tree.nodes.new("CompositorNodeCryptomatteV2")
