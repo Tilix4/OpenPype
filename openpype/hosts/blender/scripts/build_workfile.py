@@ -336,7 +336,10 @@ def build_layout(project_name, asset_name):
 
 
 def setup_character_compositing(
-    asset_name, character_name, source_compositing_nodegroup, input_image_node
+    asset_name: str,
+    character_name: str,
+    source_compositing_nodegroup: bpy.types.NodeTree,
+    input_image_node: bpy.types.Node,
 ) -> bpy.types.NodeTree:
     """Setup compositing nodes for character.
 
