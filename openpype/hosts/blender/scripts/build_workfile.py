@@ -190,6 +190,15 @@ def create_gdeformer_collection(parent_collection: bpy.types.Collection):
                 obj.modifiers["GroundDeform"]["Input_2"] = gdeformer_col
 
 
+def _get_character_compositing_nodegroup_name(character_name: str) -> str:
+    """Get character compositing nodegroup name.
+
+    Args:
+        character_name (str):  The character name.
+    """
+    return f"nodegroupCompositing{character_name}"
+
+
 def build_layout(project_name, asset_name):
     """Build layout workfile.
 
@@ -326,6 +335,16 @@ def build_layout(project_name, asset_name):
                 list(compo_datablocks)[0],
                 input_image_node,
             )
+
+            # Create instance for compositing node
+            bpy.ops.scene.create_openpype_instance(
+                creator_name="CreateBlenderNodegroup",
+                subset_name=_get_character_compositing_nodegroup_name(
+                    container.name
+                ),
+                datapath="node_groups",
+                datablock_name=input_image_node.node_tree.name,
+            )
     else:
         # Link last matte color correct node to composite node
         composite_node = bpy.context.scene.node_tree.nodes["Composite"]
@@ -336,7 +355,6 @@ def build_layout(project_name, asset_name):
 
 
 def setup_character_compositing(
-    asset_name: str,
     character_name: str,
     source_compositing_nodegroup: bpy.types.NodeTree,
     input_image_node: bpy.types.Node,
@@ -344,11 +362,10 @@ def setup_character_compositing(
     """Setup compositing nodes for character.
 
     Args:
-        asset_name (str):  The current asset name from OpenPype Session.
         character_name (str):  The character to create compositing of.
-        source_compositing_nodegroup (bpy.types.NodeTree):  
+        source_compositing_nodegroup (bpy.types.NodeTree):
             The source nodegroup to use for compositing.
-        input_image_node (bpy.types.Node):  
+        input_image_node (bpy.types.Node):
             The input image node to use for compositing.
 
     Returns:
@@ -406,15 +423,6 @@ def setup_character_compositing(
     scene.node_tree.links.new(
         input_image_node.outputs["Image"],
         matte_color_correct_node.inputs["Image"],
-    )
-
-    # Create instance for compositing node
-    bpy.ops.scene.create_openpype_instance(
-        creator_name="CreateBlenderNodegroup",
-        asset_name=asset_name,
-        subset_name=f"nodegroupCompositing{character_name}",
-        datapath="node_groups",
-        datablock_name=compositing_nodegroup.name,
     )
 
     return matte_color_correct_node
@@ -499,6 +507,46 @@ def build_anim(project_name, asset_name):
     load_subset(
         project_name, asset_name, "BoardReference", "Background", "mov"
     )
+
+    # Setup cryptomatte
+    bpy.context.scene.view_layers[
+        "ViewLayer"
+    ].use_pass_cryptomatte_asset = True
+
+    # Set compositing from published characters nodegroups
+    input_image_node = None
+    for container in bpy.context.scene.openpype_containers:
+        if container.get("avalon", {}).get("family") == "rig":
+            character_name = _get_character_compositing_nodegroup_name(
+                container.name
+            )
+            # Get published compositing node groups for character
+            try:
+                _char_comp_container, char_comp_datablocks = load_subset(
+                    project_name,
+                    asset_name,
+                    character_name,
+                    "LinkBlenderNodegroupLoader",
+                )
+            except RuntimeError:
+                print(
+                    f"Could not find published compositing nodegroup for {container.name}"
+                )
+                continue
+
+            # Create compositing node tree
+            input_image_node = setup_character_compositing(
+                character_name,
+                list(char_comp_datablocks)[0],
+                input_image_node,
+            )
+    else:
+        # Link last matte color correct node to composite node
+        composite_node = bpy.context.scene.node_tree.nodes["Composite"]
+        bpy.context.scene.node_tree.links.new(
+            input_image_node.outputs["Image"],
+            composite_node.inputs["Image"],
+        )
 
 
 def build_render(project_name, asset_name):
