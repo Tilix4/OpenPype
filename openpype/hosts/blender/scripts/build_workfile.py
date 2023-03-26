@@ -10,6 +10,11 @@ from openpype.client import (
     get_representations,
 )
 from openpype.client.entity_links import get_linked_representation_id
+from openpype.client.entities import (
+    get_representation_by_name,
+    get_version_by_id,
+)
+from openpype.hosts.blender.api.pipeline import AVALON_PROPERTY
 from openpype.hosts.blender.api.properties import OpenpypeContainer
 from openpype.lib.local_settings import get_local_site_id
 from openpype.modules import ModulesManager
@@ -21,6 +26,7 @@ from openpype.pipeline import (
     loaders_from_representation,
 )
 from openpype.pipeline.create import get_legacy_creator_by_name
+from openpype.pipeline.load.utils import switch_container
 
 
 def download_subset(
@@ -463,6 +469,25 @@ def build_anim(project_name, asset_name):
     bpy.ops.scene.make_container_publishable(
         container_name=layout_container.name
     )
+
+    # Switch containers to versioned
+    for container in bpy.context.scene.openpype_containers:
+        container_metadata = container[AVALON_PROPERTY]
+        # Get hero representation
+        current_version = get_version_by_id(
+            project_name, container_metadata.get("parent"), fields=["parent"]
+        )
+
+        last_version = get_last_version_by_subset_id(
+            project_name, current_version["parent"], fields=["_id"]
+        )
+
+        version_representation = get_representation_by_name(
+            project_name, container_metadata.get("name"), last_version["_id"]
+        )
+        switch_container(
+            container.get(AVALON_PROPERTY, {}), version_representation, "Link"
+        )
 
     # Substitute overridden GDEFORMER collection by local one
     old_gdeform_collection = bpy.data.collections.get("GDEFORMER")
