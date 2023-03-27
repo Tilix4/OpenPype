@@ -9,6 +9,7 @@ from openpype.client import (
     get_last_version_by_subset_id,
     get_representations,
 )
+from openpype.client.entity_links import get_linked_representation_id
 from openpype.hosts.blender.api.properties import OpenpypeContainer
 from openpype.lib.local_settings import get_local_site_id
 from openpype.modules import ModulesManager
@@ -68,17 +69,28 @@ def download_subset(
     if not representation:
         return
 
-    # Download representation on site
+    # Get sync server
     modules_manager = ModulesManager()
     sync_server = modules_manager.get("sync_server")
     local_site_id = get_local_site_id()
-    sync_server.add_site(
-        project_name,
-        representation["_id"],
-        local_site_id,
-        priority=99,
-        force=True,  # TODO meant to be removed when holding representation is fixed, see https://github.com/ynput/OpenPype/pull/4102
+
+    # Add linked representations
+    representation_ids = {representation["_id"]}
+    representation_ids.update(
+        get_linked_representation_id(
+            project_name, repre_id=representation["_id"]
+        )
     )
+
+    # Add local site to representations
+    for repre_id in representation_ids:
+        sync_server.add_site(
+            project_name,
+            repre_id,
+            local_site_id,
+            force=True,
+            priority=99,
+        )
 
     return representation
 
