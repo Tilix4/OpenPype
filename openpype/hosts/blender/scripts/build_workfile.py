@@ -88,7 +88,6 @@ def download_subset(
             project_name,
             repre_id,
             local_site_id,
-            force=True,
             priority=99,
         )
 
