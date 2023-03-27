@@ -85,17 +85,16 @@ def download_subset(
     # Add local site to representations
     for repre_id in representation_ids:
         # Check if representation is already on site
-        if sync_server.is_representation_on_site(
+        if not sync_server.is_representation_on_site(
             project_name, repre_id, local_site_id
         ):
-            continue
-
-        sync_server.add_site(
-            project_name,
-            repre_id,
-            local_site_id,
-            priority=99,
-        )
+            sync_server.add_site(
+                project_name,
+                repre_id,
+                local_site_id,
+                priority=99,
+                force=True,
+            )
 
     return representation
 
