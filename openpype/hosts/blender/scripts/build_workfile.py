@@ -77,6 +77,7 @@ def download_subset(
         representation["_id"],
         local_site_id,
         priority=99,
+        force=True,  # TODO meant to be removed when holding representation is fixed, see https://github.com/ynput/OpenPype/pull/4102
     )
 
     return representation
@@ -422,7 +423,9 @@ def build_anim(project_name, asset_name):
     """
     # Download not casting subsets
     layout_repre = download_subset(project_name, asset_name, "layoutMain")
-    board_repre = download_subset(project_name, asset_name, "BoardReference")
+    board_repre = download_subset(
+        project_name, asset_name, "BoardReference", "mov"
+    )
     camera_repre = download_subset(project_name, asset_name, "cameraMain")
     wait_for_download(project_name, [layout_repre, board_repre, camera_repre])
 
