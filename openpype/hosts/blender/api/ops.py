@@ -33,6 +33,7 @@ from openpype.client.entities import (
     get_version_by_id,
     get_subset_by_id,
 )
+from openpype.hosts.blender.utility_scripts import make_paths_absolute
 from openpype.lib.path_tools import version_up
 from openpype.modules.sync_server.sync_server import (
     get_last_published_workfile_path,
