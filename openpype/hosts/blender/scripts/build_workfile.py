@@ -438,12 +438,18 @@ def build_anim(project_name, asset_name):
         asset_name (str):  The current asset name from OpenPype Session.
     """
     # Download not casting subsets
+    workfile_layout_repre = download_subset(
+        project_name, asset_name, "workfileLayout"
+    )
     layout_repre = download_subset(project_name, asset_name, "layoutMain")
     board_repre = download_subset(
         project_name, asset_name, "BoardReference", "mov"
     )
     camera_repre = download_subset(project_name, asset_name, "cameraMain")
-    wait_for_download(project_name, [layout_repre, board_repre, camera_repre])
+    wait_for_download(
+        project_name,
+        [workfile_layout_repre, layout_repre, board_repre, camera_repre],
+    )
 
     # Load layout subset
     layout_container, _layout_datablocks = load_subset(
