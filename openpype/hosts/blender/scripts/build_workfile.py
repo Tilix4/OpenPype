@@ -610,16 +610,18 @@ def build_layout(project_name, asset_name):
     input_image_node = None
     for container in containers:
         if container.get("avalon", {}).get("family") == "rig":
+            # Setup character compositing with copy of base nodegroup
+            source_compositing_nodegroup = list(compo_datablocks)[0]
             input_image_node = setup_character_compositing(
-                asset_name,
                 container.name,
-                list(compo_datablocks)[0],
+                source_compositing_nodegroup.copy(),
                 input_image_node,
             )
 
             # Create instance for compositing node
             bpy.ops.scene.create_openpype_instance(
                 creator_name="CreateBlenderNodegroup",
+                asset_name=asset_name,
                 subset_name=_get_character_compositing_nodegroup_name(
                     container.name
                 ),
@@ -639,14 +641,14 @@ def build_layout(project_name, asset_name):
 
 def setup_character_compositing(
     character_name: str,
-    source_compositing_nodegroup: bpy.types.NodeTree,
+    compositing_nodegroup: bpy.types.NodeTree,
     input_image_node: bpy.types.Node,
 ) -> bpy.types.NodeTree:
     """Setup compositing nodes for character.
 
     Args:
         character_name (str):  The character to create compositing of.
-        source_compositing_nodegroup (bpy.types.NodeTree):
+        compositing_nodegroup (bpy.types.NodeTree):
             The source nodegroup to use for compositing.
         input_image_node (bpy.types.Node):
             The input image node to use for compositing.
@@ -692,7 +694,6 @@ def setup_character_compositing(
     # Create matte color correct node
     matte_color_correct_node = scene.node_tree.nodes.new("CompositorNodeGroup")
     matte_color_correct_node.name = f"{character_name}_MatteColorCorrect"
-    compositing_nodegroup = source_compositing_nodegroup.copy()
     compositing_nodegroup.name = f"{character_name}_Compositing"
     matte_color_correct_node.node_tree = compositing_nodegroup
 
@@ -1005,15 +1006,12 @@ def build_lipsync(project_name: str, shot_name: str):
     input_image_node = None
     for container in bpy.context.scene.openpype_containers:
         if container.get("avalon", {}).get("family") == "rig":
-            character_name = _get_character_compositing_nodegroup_name(
-                container.name
-            )
             # Get published compositing node groups for character
             try:
                 _char_comp_container, char_comp_datablocks = load_subset(
                     project_name,
                     asset_name,
-                    character_name,
+                    _get_character_compositing_nodegroup_name(container.name),
                     "LinkBlenderNodegroupLoader",
                 )
             except RuntimeError:
@@ -1024,7 +1022,7 @@ def build_lipsync(project_name: str, shot_name: str):
 
             # Create compositing node tree
             input_image_node = setup_character_compositing(
-                character_name,
+                container.name,
                 list(char_comp_datablocks)[0],
                 input_image_node,
             )
