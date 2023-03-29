@@ -14,7 +14,6 @@ from openpype.client.entities import (
     get_representation_by_name,
     get_version_by_id,
 )
-from openpype.hosts.blender.api.pipeline import AVALON_PROPERTY
 from openpype.hosts.blender.api.properties import OpenpypeContainer
 from openpype.lib.local_settings import get_local_site_id
 from openpype.modules import ModulesManager
@@ -470,13 +469,17 @@ def build_anim(project_name, asset_name):
         container_name=layout_container.name
     )
 
-    # Switch containers to versioned
+    # Switch hero containers to versioned
     for container in bpy.context.scene.openpype_containers:
-        container_metadata = container[AVALON_PROPERTY]
-        # Get hero representation
+        container_metadata = container["avalon"]
+        # Get version representation
         current_version = get_version_by_id(
-            project_name, container_metadata.get("parent"), fields=["parent"]
+            project_name, container_metadata.get("parent"), fields=["_id", "parent"]
         )
+
+        # Skip if current version representation is not hero
+        if current_version["type"] != "hero_version":
+            continue
 
         last_version = get_last_version_by_subset_id(
             project_name, current_version["parent"], fields=["_id"]
@@ -486,7 +489,7 @@ def build_anim(project_name, asset_name):
             project_name, container_metadata.get("name"), last_version["_id"]
         )
         switch_container(
-            container.get(AVALON_PROPERTY, {}), version_representation, "Link"
+            container_metadata, version_representation, "Link"
         )
 
     # Substitute overridden GDEFORMER collection by local one
