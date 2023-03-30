@@ -23,7 +23,7 @@ if __name__ == "__main__":
                     str(Path(datablock.filepath).resolve()),
                     start=str(Path(bpy.data.filepath).parent.resolve()),
                 )
-        except (RuntimeError, ValueError) as e:
+        except (RuntimeError, ValueError, OSError) as e:
             log.error(e)
 
     bpy.ops.wm.save_mainfile()
