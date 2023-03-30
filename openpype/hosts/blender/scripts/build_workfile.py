@@ -1008,12 +1008,20 @@ def build_lipsync(project_name: str, shot_name: str):
         if container.get("avalon", {}).get("family") == "rig":
             # Get published compositing node groups for character
             try:
-                _char_comp_container, char_comp_datablocks = load_subset(
+                char_comp_container, char_comp_datablocks = load_subset(
                     project_name,
                     asset_name,
                     _get_character_compositing_nodegroup_name(container.name),
-                    "LinkBlenderNodegroupLoader",
+                    "AppendBlenderNodegroupLoader",
                 )
+
+                # Make container publishable, expose its content
+                bpy.ops.scene.make_container_publishable(
+                    container_name=char_comp_container.name
+                )
+
+                # Disable instance for publishing
+                bpy.context.scene.openpype_instances[-1].publish = False
             except RuntimeError:
                 print(
                     f"Could not find published compositing nodegroup for {container.name}"
