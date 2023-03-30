@@ -28,6 +28,24 @@ from openpype.pipeline.create import get_legacy_creator_by_name
 from openpype.pipeline.load.utils import switch_container
 
 
+def get_loader(project_name, representation, loader_type=None):
+    """Get loader from representation by matching type.
+
+    Args:
+        project_name (str): The project name.
+        representation (dict): The representation.
+        loader_type (str, optional): The loader name. Defaults to None.
+
+    Returns:
+        The matched loader class.
+    """
+    all_loaders = discover_loader_plugins(project_name=project_name)
+    loaders = loaders_from_representation(all_loaders, representation)
+    for loader in loaders:
+        if loader_type in loader.__name__:
+            return loader
+
+
 def download_subset(
     project_name, asset_name, subset_name, ext="blend"
 ) -> dict:
@@ -474,23 +492,30 @@ def build_anim(project_name, asset_name):
         container_metadata = container["avalon"]
         # Get version representation
         current_version = get_version_by_id(
-            project_name, container_metadata.get("parent"), fields=["_id", "parent"]
+            project_name,
+            container_metadata.get("parent"),
+            fields=["_id", "parent", "type"],
         )
 
         # Skip if current version representation is not hero
         if current_version["type"] != "hero_version":
             continue
 
+        # Get last version representation
         last_version = get_last_version_by_subset_id(
             project_name, current_version["parent"], fields=["_id"]
         )
-
         version_representation = get_representation_by_name(
-            project_name, container_metadata.get("name"), last_version["_id"]
+            project_name, "blend", last_version["_id"]
         )
-        switch_container(
-            container_metadata, version_representation, "Link"
+
+        # Switch container to versioned
+        loader = get_loader(
+            project_name,
+            version_representation,
+            container_metadata.get("loader"),
         )
+        switch_container(container_metadata, version_representation, loader)
 
     # Substitute overridden GDEFORMER collection by local one
     old_gdeform_collection = bpy.data.collections.get("GDEFORMER")
