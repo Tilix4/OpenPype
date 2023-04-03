@@ -16,7 +16,7 @@ if __name__ == "__main__":
             if (
                 datablock
                 and not datablock.is_library_indirect
-                and datablock.filepath.startswith("//")
+                and not datablock.filepath.startswith("//")
             ):
                 datablock.filepath = bpy.path.relpath(
                     str(Path(datablock.filepath).resolve()),
