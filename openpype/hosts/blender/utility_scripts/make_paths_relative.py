@@ -11,19 +11,18 @@ if __name__ == "__main__":
         f"Blend file | All paths converted to relative: {bpy.data.filepath}"
     )
     # Resolve path from source filepath with the relative filepath
-    datablocks_with_filepath = [
-        datablock
-        for datablock in list(bpy.data.libraries) + list(bpy.data.images)
-        if not datablock.is_library_indirect
-    ]
-    for datablock in datablocks_with_filepath:
+    for datablock in list(bpy.data.libraries) + list(bpy.data.images):
         try:
-            if not datablock.filepath.startswith("//"):
+            if (
+                datablock
+                and not datablock.is_library_indirect
+                and datablock.filepath.startswith("//")
+            ):
                 datablock.filepath = bpy.path.relpath(
                     str(Path(datablock.filepath).resolve()),
                     start=str(Path(bpy.data.filepath).parent.resolve()),
                 )
-        except (RuntimeError, ValueError, OSError) as e:
+        except (RuntimeError, ReferenceError, ValueError, OSError) as e:
             log.error(e)
 
     bpy.ops.wm.save_mainfile()
