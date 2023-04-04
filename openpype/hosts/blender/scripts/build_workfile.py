@@ -182,6 +182,8 @@ def load_subset(
         Tuple[OpenpypeContainer, Set[bpy.types.ID]]:
             (Container, Datablocks)
     """
+    if not representation:
+        return
 
     all_loaders = discover_loader_plugins(project_name=project_name)
     loaders = loaders_from_representation(all_loaders, representation)
@@ -455,6 +457,14 @@ def build_layout(project_name, asset_name):
     audio_repre = download_subset(
         project_name, asset_name, "AudioReference", "wav"
     )
+    concept_repre = download_subset(
+        project_name, asset_name, "ConceptReference", "jpg"
+    )
+    compo_nodes_repre = download_subset(
+        project_name,
+        "CompositingNodesBank",
+        "nodegroupMatteColorCorrect",
+    )
 
     # Create layout instance
     layout_instance = create_instance("CreateLayout", "layoutMain")
@@ -598,13 +608,13 @@ def build_layout(project_name, asset_name):
     bpy.context.scene.view_layers[
         "ViewLayer"
     ].use_pass_cryptomatte_asset = True
+    bpy.context.scene.use_nodes = True
 
     # Load base nodegroup and make it publishable
     _compo_container, compo_datablocks = load_subset(
         project_name,
-        "CompositingNodesBank",
-        "nodegroupMatteColorCorrect",
-        "Append",
+        compo_nodes_repre,
+        "AppendBlenderNodegroupLoader",
     )
 
     input_image_node = None
@@ -657,7 +667,6 @@ def setup_character_compositing(
         bpy.types.NodeTree:  The output image node.
     """
     scene = bpy.context.scene
-    scene.use_nodes = True
 
     # Get render layers node
     render_layer_node = scene.node_tree.nodes.get("Render Layers")
@@ -838,6 +847,21 @@ def build_anim(project_name, asset_name):
                 errors.append(f"Switch failed for {container.name}: {err}")
                 continue
 
+    # Download character compositing nodegroups
+    compo_nodes_repres = [
+        (
+            container.name,
+            download_subset(
+                project_name,
+                asset_name,
+                _get_character_compositing_nodegroup_name(container.name),
+            ),
+        )
+        for container in bpy.context.scene.openpype_containers
+        if container.get("avalon", {}).get("family") == "rig"
+    ]
+    wait_for_download(project_name, [repre for _, repre in compo_nodes_repres])
+
     # Substitute overridden GDEFORMER collection by local one
     scene_collections_by_name = {
         c.name: c for c in bpy.context.scene.collection.children_recursive
@@ -1001,38 +1025,36 @@ def build_lipsync(project_name: str, shot_name: str):
     bpy.context.scene.view_layers[
         "ViewLayer"
     ].use_pass_cryptomatte_asset = True
+    bpy.context.scene.use_nodes = True
 
     # Set compositing from published characters nodegroups
     input_image_node = None
-    for container in bpy.context.scene.openpype_containers:
-        if container.get("avalon", {}).get("family") == "rig":
-            # Get published compositing node groups for character
-            try:
-                char_comp_container, char_comp_datablocks = load_subset(
-                    project_name,
-                    asset_name,
-                    _get_character_compositing_nodegroup_name(container.name),
-                    "AppendBlenderNodegroupLoader",
-                )
+    for rig_name, representation in compo_nodes_repres:
+        # Get published compositing node groups for character
+        try:
+            char_comp_container, char_comp_datablocks = load_subset(
+                project_name,
+                representation,
+                "AppendBlenderNodegroupLoader",
+            )
 
-                # Make container publishable, expose its content
-                bpy.ops.scene.make_container_publishable(
-                    container_name=char_comp_container.name
-                )
+            # Make container publishable, expose its content
+            bpy.ops.scene.make_container_publishable(
+                container_name=char_comp_container.name
+            )
 
-                # Disable instance for publishing
-                bpy.context.scene.openpype_instances[-1].publish = False
-            except RuntimeError:
-                print(
-                    f"Could not find published compositing nodegroup for {container.name}"
-                )
-                continue
+            # Disable instance for publishing
+            bpy.context.scene.openpype_instances[-1].publish = False
 
             # Create compositing node tree
             input_image_node = setup_character_compositing(
-                container.name,
+                rig_name,
                 list(char_comp_datablocks)[0],
                 input_image_node,
+            )
+        except RuntimeError:
+            print(
+                f"Could not find published compositing nodegroup for {representation['name']}"
             )
     else:
         # Link last matte color correct node to composite node
