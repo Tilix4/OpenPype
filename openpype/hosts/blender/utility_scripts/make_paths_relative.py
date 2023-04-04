@@ -1,6 +1,7 @@
 """Make all paths relative."""
 
 from pathlib import Path
+from itertools import chain
 import bpy
 
 from openpype.lib.log import Logger
@@ -11,7 +12,7 @@ if __name__ == "__main__":
         f"Blend file | All paths converted to relative: {bpy.data.filepath}"
     )
     # Resolve path from source filepath with the relative filepath
-    for datablock in list(bpy.data.libraries) + list(bpy.data.images):
+    for datablock in chain(bpy.data.libraries, bpy.data.images):
         try:
             if (
                 datablock
