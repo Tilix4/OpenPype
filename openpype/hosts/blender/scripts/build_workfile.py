@@ -12,6 +12,7 @@ from openpype.client import (
 from openpype.client.entity_links import get_linked_representation_id
 from openpype.client.entities import (
     get_representation_by_name,
+    get_representation_by_id,
     get_version_by_id,
 )
 from openpype.hosts.blender.api.properties import OpenpypeContainer
@@ -496,6 +497,22 @@ def build_anim(project_name, asset_name):
             container_metadata.get("parent"),
             fields=["_id", "parent", "type"],
         )
+
+        # If current_version is None retry with other methods.
+        if not current_version:
+            current_representation = get_representation_by_id(
+                project_name,
+                container_metadata.get("representation"),
+                fields=["parent"],
+            )
+            current_version = get_version_by_id(
+                project_name,
+                current_representation["parent"],
+                fields=["_id", "parent", "type"],
+            )
+            # current_version is None again, skip this container.
+            if not current_version:
+                continue
 
         # Skip if current version representation is not hero
         if current_version["type"] != "hero_version":
