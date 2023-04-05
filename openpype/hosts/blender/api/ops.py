@@ -1007,6 +1007,10 @@ class BuildWorkFile(bpy.types.Operator):
 
     # Should save property
     save_as: bpy.props.BoolProperty(name="Save as...", default=True)
+    # Should clear current scene property
+    clear_scene: bpy.props.BoolProperty(
+        name="Clear current scene", default=False
+    )
 
     def __init__(self):
         print(f"Initialising {self.bl_idname}...")
@@ -1016,27 +1020,36 @@ class BuildWorkFile(bpy.types.Operator):
         if not bpy.app.timers.is_registered(_process_app_events):
             bpy.app.timers.register(_process_app_events, persistent=True)
 
-    def _build_first_workfile(self):
-        # clear all objects and collections
-        for obj in set(bpy.data.objects):
-            bpy.data.objects.remove(obj)
-        for collection in set(bpy.data.collections):
-            bpy.data.collections.remove(collection)
-        # purgne unused datablock
-        while bpy.data.orphans_purge(do_local_ids=False, do_recursive=True):
-            pass
-        # clear all libraries
-        for library in list(bpy.data.libraries):
-            bpy.data.libraries.remove(library)
+    def _build_first_workfile(self, clear_scene: bool, save_as: bool):
+        """Execute Build First workfile process.
+        
+        Args:
+            clear_scene (bool): Clear scene content before the build. 
+            save_as (bool): Save as new incremented workfile after the build.
+        """
+        if clear_scene:
+            # Clear scene content
+            print("Clear scene content")
 
+            # clear all objects and collections
+            for obj in set(bpy.data.objects):
+                bpy.data.objects.remove(obj)
+            for collection in set(bpy.data.collections):
+                bpy.data.collections.remove(collection)
+            # purgne unused datablock
+            while bpy.data.orphans_purge(
+                do_local_ids=False, do_recursive=True
+            ):
+                pass
+            # clear all libraries
+            for library in list(bpy.data.libraries):
+                bpy.data.libraries.remove(library)
+
+        print("Build Workfile")
         build_workfile()
 
-    def execute(self, context):
-        mti = MainThreadItem(self._build_first_workfile)
-        execute_in_main_thread(mti)
-
-        # Saving workfile
-        if self.save_as:
+        if save_as:
+            # Saving workfile
             print("Saving workfile")
 
             with qt_app_context():
@@ -1064,6 +1077,12 @@ class BuildWorkFile(bpy.types.Operator):
                     save_file(file_path, copy=False)
                 else:
                     print("Failed to save")
+
+    def execute(self, context):
+        mti = MainThreadItem(
+            self._build_first_workfile, self.clear_scene, self.save_as
+        )
+        execute_in_main_thread(mti)
 
         return {"FINISHED"}
 
