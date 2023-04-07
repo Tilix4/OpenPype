@@ -639,14 +639,14 @@ def build_lipsync(project_name: str, shot_name: str):
     )
 
     for representation in representations:
-        try:
+        if representation:
             load_subset(
                 project_name,
                 representation,
                 "rigMain",
                 "LinkRigLoader",
             )
-        except TypeError:
+        else:
             print(
                 f"Can't load {representation['context']['asset']} {'rigMain'}."
             )
