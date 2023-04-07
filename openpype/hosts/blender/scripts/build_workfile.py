@@ -206,13 +206,15 @@ def create_instance(creator_name, instance_name, **options):
 
 
 def download_kitsu_casting(
-    project_name: str, shot_name: str, rig_only: bool = False
+        project_name: str, shot_name: str, asset_types: List[str] = None,
 ) -> List[dict]:
     """Download kitsu casting
 
     Args:
         project_name (str): Current project name from OpenPype Session.
         shot_name (str): Current shot name from OpenPype Session.
+        asset_types (List[str]): Asset types to include.
+            All supported asset types if none provided. Defaults to None.
 
     Returns:
         list: Representations.
@@ -243,9 +245,15 @@ def download_kitsu_casting(
     representations = []
     for actor in casting:
         for _ in range(actor["nb_occurences"]):
-            if actor["asset_type_name"] == "Character":
+            if (
+                actor["asset_type_name"] == "Character"
+                and (not asset_types or "Character" in asset_types)
+            ):
                 subset_name = "rigMain"
-            elif not rig_only and actor["asset_type_name"] == "Environment":
+            elif (
+                actor["asset_type_name"] == "Environment"
+                and (not asset_types or "Environment" in asset_types)
+            ):
                 subset_name = "setdressMain"
             else:
                 continue
@@ -635,7 +643,7 @@ def build_lipsync(project_name: str, shot_name: str):
     """
 
     representations = download_kitsu_casting(
-        project_name, shot_name, rig_only=True
+        project_name, shot_name, asset_types=["Character"]
     )
 
     for representation in representations:
