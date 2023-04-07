@@ -207,7 +207,7 @@ def create_instance(creator_name, instance_name, **options):
 
 def download_kitsu_casting(
     project_name: str, shot_name: str, rig_only: bool = False
-) -> list:
+) -> List[dict]:
     """Download kitsu casting
 
     Args:
