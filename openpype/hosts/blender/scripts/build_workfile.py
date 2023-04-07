@@ -205,16 +205,19 @@ def create_instance(creator_name, instance_name, **options):
     )
 
 
-def get_kitsu_casting(project_name: str, shot_name: str) -> dict:
-    """Get casting from kitsu.
+def download_kitsu_casting(
+    project_name: str, shot_name: str, rig_only: bool = False
+) -> list:
+    """Download kitsu casting
 
     Args:
         project_name (str): Current project name from OpenPype Session.
         shot_name (str): Current shot name from OpenPype Session.
 
     Returns:
-        dict: Kitsu casting.
+        list: Representations.
     """
+
     # Check if kitsu_module is available
     kitsu_module = ModulesManager().modules_by_name.get("kitsu")
     assert kitsu_module and kitsu_module.enabled, "Kitsu module is unavailable"
@@ -236,22 +239,6 @@ def get_kitsu_casting(project_name: str, shot_name: str) -> dict:
 
     # Logout from gazu
     gazu.log_out()
-
-    return casting
-
-
-def download_kitsu_casting(
-    project_name: str, casting: dict, rig_only: bool = False
-) -> list:
-    """Download kitsu casting
-
-    Args:
-        project_name (str): Current project name from OpenPype Session.
-        casting (dict): Kitsu casting.
-
-    Returns:
-        list: Representations.
-    """
 
     representations = []
     for actor in casting:
@@ -286,10 +273,7 @@ def load_casting(project_name: str, shot_name: str) -> Set[OpenpypeContainer]:
         Set[OpenpypeContainer]: Casted assets containers.
     """
 
-    casting = get_kitsu_casting(project_name, shot_name)
-    assert casting, "Failed to get kitsu casting"
-
-    representations = download_kitsu_casting(project_name, casting)
+    representations = download_kitsu_casting(project_name, shot_name)
 
     # Load downloaded subsets
     containers = []
@@ -650,11 +634,8 @@ def build_lipsync(project_name: str, shot_name: str):
         shot_name (str):  Current shot name from OpenPype Session.
     """
 
-    casting = get_kitsu_casting(project_name, shot_name)
-    assert casting, "Failed to get kitsu casting"
-
     representations = download_kitsu_casting(
-        project_name, casting, rig_only=True
+        project_name, shot_name, rig_only=True
     )
 
     for representation in representations:
