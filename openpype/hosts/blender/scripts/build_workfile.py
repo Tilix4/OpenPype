@@ -240,6 +240,41 @@ def get_kitsu_casting(project_name: str, shot_name: str) -> dict:
     return casting
 
 
+def download_kitsu_casting(
+    project_name: str, casting: dict, rig_only: bool = False
+) -> list:
+    """Download kitsu casting
+
+    Args:
+        project_name (str): Current project name from OpenPype Session.
+        casting (dict): Kitsu casting.
+
+    Returns:
+        list: Representations.
+    """
+
+    representations = []
+    for actor in casting:
+        for _ in range(actor["nb_occurences"]):
+            if actor["asset_type_name"] == "Character":
+                subset_name = "rigMain"
+            elif not rig_only and actor["asset_type_name"] == "Environment":
+                subset_name = "setdressMain"
+            else:
+                continue
+
+            # Download subset
+            representation = download_subset(
+                project_name, actor["asset_name"], subset_name
+            )
+            if representation:
+                representations.append(representation)
+
+    wait_for_download(project_name, representations)
+
+    return representations
+
+
 def load_casting(project_name: str, shot_name: str) -> Set[OpenpypeContainer]:
     """Load casting from shot_name using kitsu api.
 
@@ -254,22 +289,7 @@ def load_casting(project_name: str, shot_name: str) -> Set[OpenpypeContainer]:
     casting = get_kitsu_casting(project_name, shot_name)
     assert casting, "Failed to get kitsu casting"
 
-    representations = []
-    for actor in casting:
-        for _ in range(actor["nb_occurences"]):
-            if actor["asset_type_name"] == "Environment":
-                subset_name = "setdressMain"
-            else:
-                subset_name = "rigMain"
-
-            # Download subset
-            representation = download_subset(
-                project_name, actor["asset_name"], subset_name
-            )
-            if representation:
-                representations.append(representation)
-
-    wait_for_download(project_name, representations)
+    representations = download_kitsu_casting(project_name, casting)
 
     # Load downloaded subsets
     containers = []
@@ -633,18 +653,22 @@ def build_lipsync(project_name: str, shot_name: str):
     casting = get_kitsu_casting(project_name, shot_name)
     assert casting, "Failed to get kitsu casting"
 
-    for actor in casting:
-        for _ in range(actor["nb_occurences"]):
-            if actor["asset_type_name"] == "Character":
-                try:
-                    load_subset(
-                        project_name,
-                        actor["asset_name"],
-                        "rigMain",
-                        "LinkRigLoader",
-                    )
-                except TypeError:
-                    print(f"Cannot load {actor['asset_name']} {'rigMain'}.")
+    representations = download_kitsu_casting(
+        project_name, casting, rig_only=True
+    )
+
+    for representation in representations:
+        try:
+            load_subset(
+                project_name,
+                representation,
+                "rigMain",
+                "LinkRigLoader",
+            )
+        except TypeError:
+            print(
+                f"Can't load {representation['context']['asset']} {'rigMain'}."
+            )
 
 
 def build_render(project_name, asset_name):
