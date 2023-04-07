@@ -848,19 +848,16 @@ def build_anim(project_name, asset_name):
                 continue
 
     # Download character compositing nodegroups
-    compo_nodes_repres = [
-        (
-            container.name,
-            download_subset(
-                project_name,
-                asset_name,
-                _get_character_compositing_nodegroup_name(container.name),
-            ),
+    compo_nodes_repres = {
+        container.name: download_subset(
+            project_name,
+            asset_name,
+            _get_character_compositing_nodegroup_name(container.name),
         )
         for container in bpy.context.scene.openpype_containers
         if container.get("avalon", {}).get("family") == "rig"
-    ]
-    wait_for_download(project_name, [repre for _, repre in compo_nodes_repres])
+    }
+    wait_for_download(project_name, compo_nodes_repres.values())
 
     # Substitute overridden GDEFORMER collection by local one
     scene_collections_by_name = {
@@ -1021,6 +1018,10 @@ def build_lipsync(project_name: str, shot_name: str):
                 f"Can't load {representation['context']['asset']} {'rigMain'}."
             )
 
+    # Stop here if no character compositing nodegroups
+    if not any(compo_nodes_repres.values()):
+        return
+
     # Setup cryptomatte
     bpy.context.scene.view_layers[
         "ViewLayer"
@@ -1029,7 +1030,7 @@ def build_lipsync(project_name: str, shot_name: str):
 
     # Set compositing from published characters nodegroups
     input_image_node = None
-    for rig_name, representation in compo_nodes_repres:
+    for rig_name, representation in compo_nodes_repres.items():
         # Get published compositing node groups for character
         try:
             char_comp_container, char_comp_datablocks = load_subset(
