@@ -19,11 +19,13 @@ class CollectKitsuEntities(pyblish.api.ContextPlugin):
         context.data["kitsu_project"] = kitsu_project
         self.log.debug("Collect kitsu project: {}".format(kitsu_project))
 
+        # Collect asset
+        asset_doc = context.data.get("assetEntity")
+        if not asset_doc:
+            raise KeyError("'assetEntity' not found in context")
+
         kitsu_entities_by_id = {}
         for instance in context:
-            asset_doc = instance.data.get("assetEntity")
-            if not asset_doc:
-                continue
 
             zou_asset_data = asset_doc["data"].get("zou")
             if not zou_asset_data:

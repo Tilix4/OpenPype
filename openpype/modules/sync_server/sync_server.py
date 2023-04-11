@@ -2,8 +2,15 @@
 import os
 import asyncio
 import threading
+from time import sleep, time
 import concurrent.futures
 from time import sleep
+
+from openpype.pipeline.template_data import get_template_data
+
+from openpype.client import get_asset_by_name, get_last_version_by_subset_id, get_representations, get_subset_by_name, get_linked_representation_id
+from openpype.lib.local_settings import get_local_site_id
+from openpype.modules.base import ModulesManager
 
 from .providers import lib
 from openpype.client.entity_links import get_linked_representation_id
@@ -283,6 +290,111 @@ def download_last_published_workfile(
         sleep(5)
 
     return last_published_workfile_path
+
+def download_subset(
+    project_name, asset_name, subset_name, ext="blend"
+):
+    """Download the representation of the subset last version on current site.
+
+    Args:
+        project_name (str): The project name.
+        asset_name (str): The asset name.
+        subset_name (str): The subset name.
+        ext (str, optional): The representation extension. Defaults to "blend".
+
+    Returns:
+        dict: The subset representation.
+    """
+    asset = get_asset_by_name(project_name, asset_name, fields=["_id"])
+    if not asset:
+        return
+
+    subset = get_subset_by_name(
+        project_name,
+        subset_name,
+        asset["_id"],
+        fields=["_id"],
+    )
+    if not subset:
+        return
+
+    last_version = get_last_version_by_subset_id(
+        project_name,
+        subset["_id"],
+        fields=["_id"],
+    )
+    if not last_version:
+        return
+
+    representation = next(
+        get_representations(
+            project_name,
+            version_ids=[last_version["_id"]],
+            context_filters={"ext": [ext]},
+        ),
+        None,
+    )
+    if not representation:
+        return
+
+    # Get sync server
+    modules_manager = ModulesManager()
+    sync_server = modules_manager.get("sync_server")
+    local_site_id = get_local_site_id()
+
+    # Add linked representations
+    representation_ids = {representation["_id"]}
+    representation_ids.update(
+        get_linked_representation_id(
+            project_name, repre_id=representation["_id"]
+        )
+    )
+
+    # Add local site to representations
+    for repre_id in representation_ids:
+        # Check if representation is already on site
+        if not sync_server.is_representation_on_site(
+            project_name, repre_id, local_site_id
+        ):
+            sync_server.add_site(
+                project_name,
+                repre_id,
+                local_site_id,
+                priority=99,
+                force=True,
+            )
+
+    return representation
+
+
+def wait_for_download(project_name, representations):
+    """Wait for download of representations.
+
+    Args:
+        project_name (str): Project name.
+        representations (List[dict]): List of representations to wait for.
+    """
+    # Get sync server
+    modules_manager = ModulesManager()
+    sync_server = modules_manager.get("sync_server")
+
+    # Reset timer
+    sync_server.reset_timer()
+
+    # Wait for download
+    local_site_id = get_local_site_id()
+    start = time()  # 5 minutes timeout
+    while (
+        not all(
+            sync_server.is_representation_on_site(
+                project_name, r["_id"], local_site_id
+            )
+            for r in representations
+            if r
+        )
+        and time() - start < 300
+    ):
+        sleep(5)
 
 
 class SyncServerThread(threading.Thread):

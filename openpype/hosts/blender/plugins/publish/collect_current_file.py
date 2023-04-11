@@ -46,6 +46,7 @@ class CollectBlenderCurrentFile(pyblish.api.ContextPlugin):
             {
                 "subset": subset,
                 "asset": os.getenv("AVALON_ASSET", None),
+                "task": task,
                 "label": subset,
                 "publish": True,
                 "family": "workfile",

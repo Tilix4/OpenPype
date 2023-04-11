@@ -73,7 +73,7 @@ def install():
     _register_callbacks()
     _register_events()
 
-    if not IS_HEADLESS:
+    if not IS_HEADLESS or True:
         ops.register()
         properties.register()
         ui.register()
