@@ -31,14 +31,15 @@ class AddMakePathsAbsoluteToLaunchArgs(PreLaunchHook):
             "Opening blend file with all paths converted to absolute"
         )
         # Add path to workfile to arguments
-        self.launch_context.launch_args.extend(
-            [
-                "-P",
-                Path(utility_scripts.__file__).parent.joinpath(
-                    "make_paths_absolute.py"
-                ).as_posix(),
-                "--",
-                "--source_filepath",
-                self.data.get("source_filepath", ''),
-            ]
+        self.launch_context.data.setdefault("python_scripts", [])
+        self.launch_context.data["python_scripts"].append(
+            (
+                Path(utility_scripts.__file__)
+                .parent.joinpath("make_paths_absolute.py")
+                .as_posix(),
+                [
+                    "--source_filepath",
+                    self.data.get("source_filepath", ""),
+                ],
+            )
         )
