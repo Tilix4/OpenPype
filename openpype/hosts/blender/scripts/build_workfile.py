@@ -169,9 +169,7 @@ def load_subset(
     """
 
     all_loaders = discover_loader_plugins(project_name=project_name)
-    # print("tada", all_loaders)
     loaders = loaders_from_representation(all_loaders, representation)
-    # print("pata", loaders)
     for loader in reversed(loaders):
         if loader_type in loader.__name__:
             return load_container(loader, representation)
