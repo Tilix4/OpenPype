@@ -16,6 +16,7 @@ from openpype.client.entities import (
     get_representation_by_id,
     get_version_by_id,
 )
+from openpype.hosts.blender.api.lib import add_datablocks_to_container
 from openpype.hosts.blender.api.properties import OpenpypeContainer
 from openpype.hosts.blender.api.lib import (
     add_datablocks_to_container,
@@ -610,12 +611,24 @@ def build_layout(project_name, asset_name):
     ].use_pass_cryptomatte_asset = True
     bpy.context.scene.use_nodes = True
 
-    # Load base nodegroup and make it publishable
+    # Load base nodegroup
     _compo_container, compo_datablocks = load_subset(
         project_name,
         compo_nodes_repre,
         "AppendBlenderNodegroupLoader",
     )
+
+    # Create instance for compositing node
+    bpy.ops.scene.create_openpype_instance(
+        creator_name="CreateBlenderNodegroup",
+        asset_name=asset_name,
+        subset_name="charactersCompositingNodegroups",
+        datapath="node_groups",
+        datablock_name=input_image_node.node_tree.name,
+    )
+
+    # Get compositing instance
+    compo_instance = bpy.context.scene.openpype_instances[-1]
 
     input_image_node = None
     for container in containers:
@@ -628,16 +641,8 @@ def build_layout(project_name, asset_name):
                 input_image_node,
             )
 
-            # Create instance for compositing node
-            bpy.ops.scene.create_openpype_instance(
-                creator_name="CreateBlenderNodegroup",
-                asset_name=asset_name,
-                subset_name=_get_character_compositing_nodegroup_name(
-                    container.name
-                ),
-                datapath="node_groups",
-                datablock_name=input_image_node.node_tree.name,
-            )
+            # Add compositing nodegroup to instance
+            add_datablocks_to_container([input_image_node.node_tree], compo_instance)
     else:
         # Link last matte color correct node to composite node
         composite_node = bpy.context.scene.node_tree.nodes["Composite"]
