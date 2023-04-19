@@ -1035,6 +1035,8 @@ class BuildWorkFile(bpy.types.Operator):
             # Clear scene content
             print("Clear scene content")
 
+            # clear all openpype instances
+            bpy.context.scene.openpype_instances.clear()
             # clear all objects and collections
             for obj in set(bpy.data.objects):
                 bpy.data.objects.remove(obj)
@@ -1048,8 +1050,6 @@ class BuildWorkFile(bpy.types.Operator):
             # clear all libraries
             for library in list(bpy.data.libraries):
                 bpy.data.libraries.remove(library)
-            # clear all openpype instances
-            bpy.context.scene.openpype_instances.clear()
 
         print("Build Workfile")
         build_workfile()
