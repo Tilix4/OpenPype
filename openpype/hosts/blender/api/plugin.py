@@ -526,7 +526,7 @@ class Creator(LegacyCreator):
             # Get collection from selected objects
             datablocks = get_selection()
         else:
-            datablocks = datablocks or []
+            datablocks = [d for d in datablocks if d] if datablocks else []
 
         # Create the container
         op_instance = bpy.context.scene.openpype_instances.get(name)

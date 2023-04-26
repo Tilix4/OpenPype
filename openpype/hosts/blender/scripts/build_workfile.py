@@ -624,7 +624,6 @@ def build_layout(project_name, asset_name):
         asset_name=asset_name,
         subset_name="charactersCompositingNodegroups",
         datapath="node_groups",
-        datablock_name=input_image_node.node_tree.name,
     )
 
     # Get compositing instance
@@ -643,13 +642,13 @@ def build_layout(project_name, asset_name):
 
             # Add compositing nodegroup to instance
             add_datablocks_to_container([input_image_node.node_tree], compo_instance)
-    else:
-        # Link last matte color correct node to composite node
-        composite_node = bpy.context.scene.node_tree.nodes["Composite"]
-        bpy.context.scene.node_tree.links.new(
-            input_image_node.outputs["Image"],
-            composite_node.inputs["Image"],
-        )
+
+    # Link last matte color correct node to composite node
+    composite_node = bpy.context.scene.node_tree.nodes["Composite"]
+    bpy.context.scene.node_tree.links.new(
+        input_image_node.outputs["Image"],
+        composite_node.inputs["Image"],
+    )
 
     assert not errors, ";\n\n".join(errors)
 
