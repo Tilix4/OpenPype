@@ -288,6 +288,9 @@ def download_kitsu_casting(
             if representation:
                 representations.append(representation)
 
+                # Keep kitsu asset type name
+                representation["asset_type_name"] = actor["asset_type_name"]
+
     wait_for_download(project_name, representations)
 
     return representations
@@ -318,6 +321,9 @@ def load_casting(project_name: str, shot_name: str) -> Set[OpenpypeContainer]:
             )
             containers.append(container)
             all_datablocks.update(datablocks)
+
+            # Keep kitsu asset type
+            container["asset_type_name"] = representation["asset_type_name"]
         except TypeError:
             print(
                 f"Cannot load {representation['context']['asset']}"
@@ -626,12 +632,13 @@ def build_layout(project_name, asset_name):
         datapath="node_groups",
     )
 
-    # Get compositing instance
+    # Get compositing instance and disable it
     compo_instance = bpy.context.scene.openpype_instances[-1]
+    compo_instance.publish = False
 
     input_image_node = None
     for container in containers:
-        if container.get("avalon", {}).get("family") == "rig":
+        if container.get("avalon", {}).get("family") == "rig" and container.get("asset_type_name") == "Character":
             # Setup character compositing with copy of base nodegroup
             source_compositing_nodegroup = list(compo_datablocks)[0]
             input_image_node = setup_character_compositing(
@@ -640,8 +647,14 @@ def build_layout(project_name, asset_name):
                 input_image_node,
             )
 
+            # Mute node
+            input_image_node.mute = True
+
             # Add compositing nodegroup to instance
             add_datablocks_to_container([input_image_node.node_tree], compo_instance)
+
+        # Clear asset type name
+        container.pop("asset_type_name", None)
 
     # Link last matte color correct node to composite node
     composite_node = bpy.context.scene.node_tree.nodes["Composite"]
