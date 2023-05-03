@@ -137,9 +137,9 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
             lambda r: r["context"].get("version") is not None,
             workfile_representations
         )
-        workfile_representation = max(
+        workfile_representation = sorted(
             filtered_repres, key=lambda r: r["context"]["version"]
-        )
+        )[self.launch_context.data.get("workfile_version", -1)]
 
         # Copy file and substitute path
         last_published_workfile_path = download_last_published_workfile(
