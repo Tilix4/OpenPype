@@ -1586,7 +1586,6 @@ def register():
         update_workfile_up_to_date, first_interval=0, persistent=True
     )
 
-
 def unregister():
     """Unregister the operators and menu."""
 
