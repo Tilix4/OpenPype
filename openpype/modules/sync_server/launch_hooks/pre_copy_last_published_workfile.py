@@ -121,10 +121,14 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
         }
 
         # Add version filter
-        if self.launch_context.data.get("workfile_version") not in {None, "last"}: 
+        workfile_version = self.launch_context.data.get("workfile_version", -1)
+        if workfile_version > 0 and workfile_version not in {None, "last"}:
             context_filters["version"] = self.launch_context.data[
                 "workfile_version"
             ]
+            version_index = 0
+        else:
+            version_index = workfile_version
 
         workfile_representations = list(get_representations(
             project_name,
@@ -146,7 +150,7 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
         # Get workfile version
         workfile_representation = sorted(
             filtered_repres, key=lambda r: r["context"]["version"]
-        )[0]
+        )[version_index]
 
         # Copy file and substitute path
         last_published_workfile_path = download_last_published_workfile(
