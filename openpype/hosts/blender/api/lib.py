@@ -22,7 +22,6 @@ from openpype.hosts.blender.api.utils import (
 from openpype.lib import Logger
 from openpype.pipeline import schema
 from openpype.pipeline.constants import AVALON_CONTAINER_ID
-from openpype.lib.path_tools import get_version_from_path
 from openpype.modules import ModulesManager
 from openpype.pipeline import (
     Anatomy,
