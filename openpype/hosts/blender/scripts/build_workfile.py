@@ -14,6 +14,7 @@ from openpype.client.entity_links import get_linked_representation_id
 from openpype.client.entities import (
     get_representation_by_name,
     get_representation_by_id,
+    get_subsets,
     get_version_by_id,
 )
 from openpype.hosts.blender.api.properties import OpenpypeContainer
@@ -619,7 +620,7 @@ def build_anim(project_name, asset_name):
     )
 
     # Load layout subset
-    layout_container, _layout_datablocks = load_subset(
+    layout_container,   _layout_datablocks = load_subset(
         project_name, layout_repre, "AppendLayoutLoader"
     )
 
@@ -872,6 +873,39 @@ def build_lipsync(project_name: str, shot_name: str):
             print(
                 f"Can't load {representation['context']['asset']} {'rigMain'}."
             )
+
+def build_fabrication(project_name, asset_name):
+    """Build fabrication workfile
+
+    Args:
+        project_name (str): The current project name from OpenPype Session.
+        asset_name (str): The current asset name from OpenPype Session.
+    """
+
+    # Get subsets
+    asset_doc = get_asset_by_name(
+        project_name, "LightSetupBank", fields=["_id"]
+    )
+    subsets = get_subsets(
+        project_name,
+        asset_ids={asset_doc["_id"]},
+        fields=["_id", "name", "data"],
+    )
+
+    # Match and download and load subset
+    for subset in subsets:
+        raw_asset_name = asset_name.split("_")[0].lower()
+        raw_subset_name = (
+            subset["name"].strip("lighting").rsplit("_", 1)[0].lower()
+        )
+        if raw_asset_name.startswith(raw_subset_name):
+            representation = download_subset(
+                project_name,
+                "LightSetupBank",
+                subset["name"],
+            )
+            wait_for_download(project_name, representation)
+
 
 
 def build_render(project_name, asset_name):
