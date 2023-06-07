@@ -620,7 +620,7 @@ def build_anim(project_name, asset_name):
     )
 
     # Load layout subset
-    layout_container,   _layout_datablocks = load_subset(
+    layout_container, _layout_datablocks = load_subset(
         project_name, layout_repre, "AppendLayoutLoader"
     )
 
@@ -874,6 +874,7 @@ def build_lipsync(project_name: str, shot_name: str):
                 f"Can't load {representation['context']['asset']} {'rigMain'}."
             )
 
+
 def build_fabrication(project_name, asset_name):
     """Build fabrication workfile
 
@@ -905,18 +906,28 @@ def build_fabrication(project_name, asset_name):
                 subset["name"],
             )
             wait_for_download(project_name, representation)
-            load_subset(project_name, representation, "LinkBlenderLightingLoader")
+            load_subset(
+                project_name, representation, "LinkBlenderLightingLoader"
+            )
     bpy.ops.scene.create_openpype_instance(
         creator_name="CreateSetdress",
         asset_name=asset_name,
         subset_name="setdressMain",
         gather_into_collection=True,
     )
+
+    if bpy.data.cameras and bpy.data.objects.find("Camera"):
+        camera_data = bpy.data.cameras["Camera"]
+    else:
+        camera_data = bpy.ops.object.camera_add()
+
+    camera_object = bpy.data.objects["Camera"]
+    camera_data.lens = 150
+
     characters_collection = bpy.data.collections.new("Characters")
     bpy.context.scene.collection.children.link(characters_collection)
     props_collection = bpy.data.collections.new("Props")
     bpy.context.scene.collection.children.link(props_collection)
-
 
 
 def build_render(project_name, asset_name):
