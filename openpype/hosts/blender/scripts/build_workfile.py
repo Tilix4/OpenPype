@@ -905,6 +905,17 @@ def build_fabrication(project_name, asset_name):
                 subset["name"],
             )
             wait_for_download(project_name, representation)
+            load_subset(project_name, representation, "LinkBlenderLightingLoader")
+    bpy.ops.scene.create_openpype_instance(
+        creator_name="CreateSetdress",
+        asset_name=asset_name,
+        subset_name="setdressMain",
+        gather_into_collection=True,
+    )
+    characters_collection = bpy.data.collections.new("Characters")
+    bpy.context.scene.collection.children.link(characters_collection)
+    props_collection = bpy.data.collections.new("Props")
+    bpy.context.scene.collection.children.link(props_collection)
 
 
 
