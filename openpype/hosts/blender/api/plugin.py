@@ -773,12 +773,13 @@ class AssetLoader(Loader):
                         override_datablocks.update(d.all_objects)
 
             for d in override_datablocks:
-                # Ensure user override NOTE: will be unecessary after BL3.4
-                if d and hasattr(d.override_library, "is_system_override"):
-                    d.override_library.is_system_override = False
+                if d and d.override_library:
+                    # Ensure user override NOTE: will be unecessary after BL3.4
+                    if hasattr(d.override_library, "is_system_override"):
+                        d.override_library.is_system_override = False
 
-                # Set source_name
-                d["source_name"] = d.override_library.reference.name
+                    # Set source_name
+                    d["source_name"] = d.override_library.reference.name
 
                 # Override armature
                 if isinstance(d, bpy.types.Object) and d.type == "ARMATURE":
