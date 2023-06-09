@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Set, Tuple
 
 import bpy
+from openpype.hosts.blender.api.utils import AVALON_PROPERTY
 
 from openpype.pipeline import (
     legacy_io,
@@ -218,6 +219,7 @@ class ExtractBlend(publish.Extractor):
             for img in images
             if img.source in {"FILE", "SEQUENCE", "MOVIE", "TILED"}
             and not img.packed_file
+            and not img.get(AVALON_PROPERTY)
         }:
             # Skip image from library or internal
             if image.library or not image.filepath:
