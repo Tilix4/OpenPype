@@ -893,40 +893,90 @@ def build_fabrication(project_name, asset_name):
         fields=["_id", "name", "data"],
     )
 
+    representations = []
     # Match and download and load subset
     for subset in subsets:
         raw_asset_name = asset_name.split("_")[0].lower()
         raw_subset_name = (
             subset["name"].strip("lighting").rsplit("_", 1)[0].lower()
         )
-        if raw_asset_name.startswith(raw_subset_name):
+        if raw_asset_name == raw_subset_name:
             representation = download_subset(
                 project_name,
                 "LightSetupBank",
                 subset["name"],
             )
-            wait_for_download(project_name, representation)
+            representations.append(representation)
             load_subset(
-                project_name, representation, "LinkBlenderLightingLoader"
+                project_name, representation, "AppendBlenderLightingLoader"
             )
+    # Wait for downloads to be finished
+    wait_for_download(project_name, representations)
+
+    # Create setdress instance
     bpy.ops.scene.create_openpype_instance(
-        creator_name="CreateSetdress",
+        creator_name="CreateWoollySetdress",
         asset_name=asset_name,
         subset_name="setdressMain",
         gather_into_collection=True,
     )
 
-    if bpy.data.cameras and bpy.data.objects.find("Camera"):
-        camera_data = bpy.data.cameras["Camera"]
-    else:
-        camera_data = bpy.ops.object.camera_add()
+    # Create camera instance
+    # If asset_name + '_cameraMain' exist don't create it
+    bpy.ops.scene.create_openpype_instance(
+        creator_name="CreateCamera",
+        asset_name=asset_name,
+        subset_name="cameraMain",
+        gather_into_collection=True,
+        datapath="objects",
+        datablock_name=asset_name +"_cameraMain",
+    )
 
-    camera_object = bpy.data.objects["Camera"]
-    camera_data.lens = 150
+    # Create review instance
+    bpy.ops.scene.create_openpype_instance(
+        creator_name="CreateReview",
+        asset_name=asset_name,
+        subset_name="reviewMain",
+        datapath="collections",
+        datablock_name=asset_name + "_cameraMain",
+        use_selection=False,
+    )
 
-    characters_collection = bpy.data.collections.new("Characters")
+    # Set camera values
+    camera = bpy.data.objects[asset_name + "_cameraMain"]
+    camera.data.lens = 200
+    camera.location[1] = -10000
+    camera.rotation_euler[0] = -1.5708
+
+    # Create empty and rename it
+    bpy.ops.object.empty_add(
+        type="PLAIN_AXES", align="WORLD", location=(0, 0, 0), scale=(1, 1, 1)
+    )
+    bpy.data.objects["Empty"].name = "DOF_ctrl_object"
+
+    # Link DOF_ctrl to cameraMain collection
+    bpy.data.collections[asset_name + "_cameraMain"].objects.link(
+        bpy.data.objects["DOF_ctrl_object"]
+    )
+    # unlink DOF_ctrl from SceneCollection collection
+    bpy.context.scene.collection.objects.unlink(
+        bpy.data.objects["DOF_ctrl_object"]
+    )
+
+    # Apply world setup on world
+    bpy.context.scene.world = bpy.data.worlds[
+        "World_" + asset_name.split("_")[0]
+    ]
+
+    # Set control of camera DOF to DOF_ctrl_object
+    bpy.data.cameras[
+        asset_name + '_cameraMain'
+    ].dof.focus_object = bpy.data.objects['DOF_ctrl_object']
+
+    # Create CHARACTERS and PROPS collections
+    characters_collection = bpy.data.collections.new("CHARACTERS")
     bpy.context.scene.collection.children.link(characters_collection)
-    props_collection = bpy.data.collections.new("Props")
+    props_collection = bpy.data.collections.new("PROPS")
     bpy.context.scene.collection.children.link(props_collection)
 
 
@@ -979,7 +1029,7 @@ def build_workfile():
     asset_name = legacy_io.Session.get("AVALON_ASSET")
     task_name = legacy_io.Session.get("AVALON_TASK").lower()
 
-    if task_name in ("model", "modeling", "fabrication"):
+    if task_name in ("model", "modeling"):
         build_model(project_name, asset_name)
 
     elif task_name in ("texture", "look", "lookdev", "shader"):
@@ -999,6 +1049,9 @@ def build_workfile():
 
     elif task_name in ("lighting", "light", "render", "rendering"):
         build_render(project_name, asset_name)
+
+    elif task_name == "fabrication":
+        build_fabrication(project_name, asset_name)
 
     else:
         return False
