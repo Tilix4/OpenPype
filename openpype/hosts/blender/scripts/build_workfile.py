@@ -945,11 +945,11 @@ def build_fabrication(project_name, asset_name):
 
     # Set camera values
     camera = bpy.data.objects[asset_camera_main]
-    camera.data.lens = 200
-    camera.location[1] = -10000
-    camera.rotation_euler[0] = -1.5708
+    camera.data.lens = 200 # 200 milimeters
+    camera.location[1] = -10000 # This value equal -100 meters
+    camera.rotation_euler[0] = -1.5708 # Euler value for -90 degrees
 
-    # Create empty and rename it
+    # Create empty to control camera DOF and rename it
     dof_ctrl = bpy.data.objects.new("DOF_ctrl_object", None)
 
     # Link DOF_ctrl to cameraMain collection
