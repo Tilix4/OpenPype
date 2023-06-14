@@ -875,7 +875,7 @@ def build_lipsync(project_name: str, shot_name: str):
             )
 
 
-def build_fabrication(project_name, asset_name):
+def build_fabrication(project_name: str, asset_name: str):
     """Build fabrication workfile.
 
     Args:
@@ -910,13 +910,12 @@ def build_fabrication(project_name, asset_name):
             if "world" in subset["name"].lower():
                 world_name = subset["name"]
             representations.append(representation)
-            load_subset(
-                project_name, representation, "AppendBlenderLightingLoader"
-            )
     # Wait for downloads to be finished
     wait_for_download(project_name, representations)
-
-    camera_name = f"{asset_name}_cameraMain"
+    for representation in representations:
+        load_subset(
+            project_name, representation, "AppendBlenderLightingLoader"
+        )
 
     # Create setdress instance
     bpy.ops.scene.create_openpype_instance(
@@ -926,6 +925,7 @@ def build_fabrication(project_name, asset_name):
         gather_into_collection=True,
     )
 
+    camera_name = f"{asset_name}_cameraMain"
     # Create camera instance
     # If `camera_name` exists don't create it
     bpy.ops.scene.create_openpype_instance(
@@ -949,7 +949,7 @@ def build_fabrication(project_name, asset_name):
     # Camera preset
     camera = bpy.data.objects[camera_name]
     camera.data.lens = 200 # 200 milimeters
-    camera.location[1] = -10000 # This value equal -100 meters on Y axis
+    camera.location[1] = -100 # This value equal -100 meters on Y axis
     camera.rotation_euler[0] = -1.5708 # Euler value for -90 degrees on X axis
 
     # Create empty to control camera DOF and rename it
@@ -962,7 +962,6 @@ def build_fabrication(project_name, asset_name):
         bpy.context.scene.world = bpy.data.worlds[
             world_name
         ]
-
 
     # Set control of camera DOF to DOF_ctrl_object
     bpy.data.cameras[camera_name].dof.focus_object = dof_ctrl
@@ -1023,10 +1022,7 @@ def build_workfile():
     asset_name = legacy_io.Session.get("AVALON_ASSET")
     task_name = legacy_io.Session.get("AVALON_TASK").lower()
 
-    if task_name in ("model", "modeling"):
-        build_model(project_name, asset_name)
-
-    elif task_name in ("texture", "look", "lookdev", "shader"):
+    if task_name in ("texture", "look", "lookdev", "shader"):
         build_look(project_name, asset_name)
 
     elif task_name in ("rig", "rigging"):
