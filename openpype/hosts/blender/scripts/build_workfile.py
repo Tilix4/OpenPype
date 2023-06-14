@@ -894,6 +894,7 @@ def build_fabrication(project_name, asset_name):
     )
 
     representations = []
+    world_name = ""
     # Match and download and load subset
     for subset in subsets:
         raw_asset_name = asset_name.split("_")[0].lower()
@@ -906,6 +907,8 @@ def build_fabrication(project_name, asset_name):
                 "LightSetupBank",
                 subset["name"],
             )
+            if "world" in subset["name"].lower():
+                world_name = subset["name"]
             representations.append(representation)
             load_subset(
                 project_name, representation, "AppendBlenderLightingLoader"
@@ -954,11 +957,12 @@ def build_fabrication(project_name, asset_name):
 
     # Link DOF_ctrl to cameraMain collection
     bpy.data.collections[camera_name].objects.link(dof_ctrl)
-
+    if world_name:
     # Apply world setup on world
-    bpy.context.scene.world = bpy.data.worlds[
-        f"World_{asset_name.split('_')[0]}"
-    ]
+        bpy.context.scene.world = bpy.data.worlds[
+            world_name
+        ]
+
 
     # Set control of camera DOF to DOF_ctrl_object
     bpy.data.cameras[camera_name].dof.focus_object = dof_ctrl
