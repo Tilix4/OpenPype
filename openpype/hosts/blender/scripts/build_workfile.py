@@ -908,6 +908,7 @@ def build_fabrication(project_name: str, asset_name: str):
                 subset["name"],
             )
             if "world" in subset["name"].lower():
+                print(subset["name"])
                 world_name = subset["name"]
             representations.append(representation)
     # Wait for downloads to be finished
@@ -948,9 +949,9 @@ def build_fabrication(project_name: str, asset_name: str):
 
     # Camera preset
     camera = bpy.data.objects[camera_name]
-    camera.data.lens = 200 # 200 milimeters
-    camera.location[1] = -100 # This value equal -100 meters on Y axis
-    camera.rotation_euler[0] = -1.5708 # Euler value for -90 degrees on X axis
+    camera.data.lens = 200  # 200 milimeters
+    camera.location[1] = -100  # This value equal -100 meters on Y axis
+    camera.rotation_euler[0] = -1.5708  # Euler value for -90 degrees on X axis
 
     # Create empty to control camera DOF and rename it
     dof_ctrl = bpy.data.objects.new("DOF_ctrl_object", None)
@@ -958,10 +959,8 @@ def build_fabrication(project_name: str, asset_name: str):
     # Link DOF_ctrl to cameraMain collection
     bpy.data.collections[camera_name].objects.link(dof_ctrl)
     if world_name:
-    # Apply world setup on world
-        bpy.context.scene.world = bpy.data.worlds[
-            world_name
-        ]
+        # Apply world setup on world
+        bpy.context.scene.world = bpy.data.worlds[world_name]
 
     # Set control of camera DOF to DOF_ctrl_object
     bpy.data.cameras[camera_name].dof.focus_object = dof_ctrl
