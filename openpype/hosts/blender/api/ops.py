@@ -29,6 +29,7 @@ from openpype.hosts.blender.api.utils import (
     BL_TYPE_DATAPATH,
     build_op_basename,
     get_parent_collection,
+    get_root_datablocks,
     link_to_collection,
     unlink_from_collection,
 )
@@ -641,7 +642,7 @@ class SCENE_OT_RemoveOpenpypeInstance(
         # Get creator class
         Creator = get_legacy_creator_by_name(self.creator_name)
 
-        # NOTE Shunting legacy_create because of useless overhead 
+        # NOTE Shunting legacy_create because of useless overhead
         # and deprecated design.
         # Will see if compatible with new creator when implemented for Blender
         avalon_prop = op_instance["avalon"]
@@ -1035,9 +1036,9 @@ class BuildWorkFile(bpy.types.Operator):
 
     def _build_first_workfile(self, clear_scene: bool, save_as: bool):
         """Execute Build First workfile process.
-        
+
         Args:
-            clear_scene (bool): Clear scene content before the build. 
+            clear_scene (bool): Clear scene content before the build.
             save_as (bool): Save as new incremented workfile after the build.
         """
         if clear_scene:
@@ -1321,8 +1322,9 @@ class SCENE_OT_MakeContainerPublishable(bpy.types.Operator):
         avalon_data = dict(container["avalon"])
 
         # Expose container content and get neutral outliner entity
-        root_outliner_datablocks = expose_container_content(
-            self.container_name
+        datablocks = expose_container_content(self.container_name)
+        root_outliner_datablocks = get_root_datablocks(
+            datablocks, tuple(BL_OUTLINER_TYPES)
         )
 
         # Get creator name
@@ -1332,6 +1334,19 @@ class SCENE_OT_MakeContainerPublishable(bpy.types.Operator):
             if creator_attrs["family"] == avalon_data.get("family"):
                 break
 
+        # Set args for outliner container
+        if root_outliner_datablocks:
+            outliner_args = {
+                "gather_into_collection": any(
+                    isinstance(datablock, bpy.types.Collection)
+                    for datablock in datablocks
+                ),
+                "datapath": "collections",
+                "datablock_name": list(datablocks)[0].name,
+            }
+        else:
+            outliner_args = {}
+
         # Create new instance
         bpy.ops.scene.create_openpype_instance(
             creator_name=creator_name,
@@ -1339,20 +1354,15 @@ class SCENE_OT_MakeContainerPublishable(bpy.types.Operator):
             if self.convert_to_current_asset
             else avalon_data["asset_name"],
             subset_name=avalon_data["name"],
-            gather_into_collection=any(
-                isinstance(datablock, bpy.types.Collection)
-                for datablock in root_outliner_datablocks
-            ),
             use_selection=False,
-            datapath="collections",
-            datablock_name=root_outliner_datablocks[0].name,
+            **outliner_args,
         )
 
         # Reassign container datablocks to new instance
         add_datablocks_to_container(
             [
                 d
-                for d in root_outliner_datablocks
+                for d in get_root_datablocks(datablocks)
                 if d
                 not in bpy.context.scene.openpype_instances[-1].get_datablocks(
                     bpy.types.Collection
@@ -1378,11 +1388,12 @@ def expose_container_content(container_name: str) -> List[bpy.types.ID]:
     container = openpype_containers.get(container_name)
 
     # Remove old container
+    datablocks = container.get_datablocks()
     root_outliner_datablocks = container.get_root_outliner_datablocks()
     openpype_containers.remove(openpype_containers.find(container.name))
 
     if not root_outliner_datablocks:
-        return
+        return datablocks
 
     new_root_outliner_datablocks = []
     kept_root_outliner_datablocks = []
