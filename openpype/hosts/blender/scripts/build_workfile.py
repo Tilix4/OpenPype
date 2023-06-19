@@ -893,8 +893,6 @@ def build_fabrication(project_name: str, asset_name: str):
         fields=["_id", "name", "data"],
     )
 
-    representations = []
-    world_name = ""
     # Match and download and load subset
     for subset in subsets:
         raw_asset_name = asset_name.split("_")[0].lower()
@@ -907,16 +905,11 @@ def build_fabrication(project_name: str, asset_name: str):
                 "LightSetupBank",
                 subset["name"],
             )
-            if "world" in subset["name"].lower():
-                print(subset["name"])
-                world_name = subset["name"]
-            representations.append(representation)
+
     # Wait for downloads to be finished
-    wait_for_download(project_name, representations)
-    for representation in representations:
-        load_subset(
-            project_name, representation, "AppendBlenderLightingLoader"
-        )
+    wait_for_download(project_name, [representation])
+    # Load representation
+    load_subset(project_name, representation, "AppendBlenderLightingLoader")
 
     # Create setdress instance
     bpy.ops.scene.create_openpype_instance(
@@ -926,7 +919,14 @@ def build_fabrication(project_name: str, asset_name: str):
         gather_into_collection=True,
     )
 
+    # Store setdress instance
+    setdress_collection = list(
+        bpy.context.scene.openpype_instances[-1].get_root_outliner_datablocks()
+    )[-1]
+
+    # Store camera name for camera instance
     camera_name = f"{asset_name}_cameraMain"
+
     # Create camera instance
     # If `camera_name` exists don't create it
     bpy.ops.scene.create_openpype_instance(
@@ -951,16 +951,19 @@ def build_fabrication(project_name: str, asset_name: str):
     camera = bpy.data.objects[camera_name]
     camera.data.lens = 200  # 200 milimeters
     camera.location[1] = -100  # This value equal -100 meters on Y axis
-    camera.rotation_euler[0] = -1.5708  # Euler value for -90 degrees on X axis
+    camera.rotation_euler[0] = 1.5708  # Euler value for 90 degrees on X axis
 
     # Create empty to control camera DOF and rename it
     dof_ctrl = bpy.data.objects.new("DOF_ctrl_object", None)
 
     # Link DOF_ctrl to cameraMain collection
     bpy.data.collections[camera_name].objects.link(dof_ctrl)
-    if world_name:
-        # Apply world setup on world
-        bpy.context.scene.world = bpy.data.worlds[world_name]
+
+    # Loop through worlds
+    for world in bpy.data.worlds:
+        # Check if a world exist with the right name and apply it
+        if raw_asset_name in world.name.lower():
+            bpy.context.scene.world = bpy.data.worlds[world.name]
 
     # Set control of camera DOF to DOF_ctrl_object
     bpy.data.cameras[camera_name].dof.focus_object = dof_ctrl
@@ -970,6 +973,20 @@ def build_fabrication(project_name: str, asset_name: str):
     bpy.context.scene.collection.children.link(characters_collection)
     props_collection = bpy.data.collections.new("PROPS")
     bpy.context.scene.collection.children.link(props_collection)
+
+    # Loop through collection
+    for collection in bpy.context.scene.collection.children:
+        # Find if one is for lights
+        if "LightSetupBank" in collection.name:
+            # Set color_tag, name
+            collection.color_tag = "NONE"
+            collection.name = "LIGHTING"
+            # Link collection to setdress collection
+            bpy.data.collections[setdress_collection.name].children.link(
+                collection
+            )
+            # Unlink collection from scene collection
+            bpy.context.scene.collection.children.unlink(collection)
 
 
 def build_render(project_name, asset_name):
