@@ -526,7 +526,7 @@ class Creator(LegacyCreator):
             # Get collection from selected objects
             datablocks = get_selection()
         else:
-            datablocks = datablocks or []
+            datablocks = [d for d in datablocks if d] if datablocks else []
 
         # Create the container
         op_instance = bpy.context.scene.openpype_instances.get(name)
@@ -716,9 +716,9 @@ class AssetLoader(Loader):
                     loaded_datablocks,
                 )
 
-                # Keep collection with datablocks
+                # Keep collection name
                 loaded_data_collections.append(
-                    (data_collection_name, loaded_datablocks)
+                    data_collection_name
                 )
 
                 # Keep loaded datablocks names
@@ -726,7 +726,8 @@ class AssetLoader(Loader):
 
         datablocks = set()
         i = 0
-        for collection_name, loaded_datablocks in loaded_data_collections:
+        for datacol_name in loaded_data_collections:
+            loaded_datablocks = getattr(data_to, datacol_name)
             # Assign original datablocks names to avoid name conflicts
             for datablock in loaded_datablocks:
                 datablock["source_name"] = loaded_names[i]
@@ -736,7 +737,7 @@ class AssetLoader(Loader):
             datablocks.update(loaded_datablocks)
 
             # Remove fake user from loaded datablocks
-            datacol = getattr(bpy.data, collection_name)
+            datacol = getattr(bpy.data, datacol_name)
             seq = [
                 False if d in datablocks else d.use_fake_user for d in datacol
             ]
@@ -785,7 +786,8 @@ class AssetLoader(Loader):
                     d.override_library.is_system_override = False
 
                 # Set source_name
-                d["source_name"] = d.override_library.reference.name
+                if d.override_library:
+                    d["source_name"] = d.override_library.reference.name
 
                 # Override armature
                 if isinstance(d, bpy.types.Object) and d.type == "ARMATURE":
@@ -1193,26 +1195,41 @@ class AssetLoader(Loader):
             container=container,
         )
 
+        # Sort with source datablocks at the end
+        datablocks.discard(None)
+        datablocks_to_remap = sorted(
+            datablocks, key=lambda d: 1 if d.library else 0
+        )
+
         # Old datablocks remap
-        for old_datablock in old_datablocks:
+        for old_datablock in sorted(
+            old_datablocks, key=lambda d: 1 if d.library else 0
+        ):
             # Match new datablock by name
             if new_datablock := next(
-                iter(
-                    sorted(
-                        (
-                            d
-                            for d in datablocks
-                            if type(d) is type(old_datablock)
-                            and old_datablock.get("source_name")
-                            == d.get("source_name")
-                        ),
-                        # Put source datablocks at the end
-                        key=lambda d: 1 if d.library else 0,
-                    )
+                (
+                    d
+                    for d in datablocks_to_remap
+                    if type(d) is type(old_datablock)
+                    and old_datablock.get("source_name")
+                    == d.get("source_name")
                 ),
                 None,
             ):
                 old_datablock.user_remap(new_datablock)
+
+                # Remove remapped datablock
+                datablocks_to_remap.remove(new_datablock)
+
+                # Skip if pure link because changes won't be saved
+                if new_datablock.library:
+                    continue
+
+                # Transfer transforms
+                if isinstance(old_datablock, bpy.types.Object):
+                    new_datablock.location = old_datablock.location
+                    new_datablock.rotation_euler = old_datablock.rotation_euler
+                    new_datablock.scale = old_datablock.scale
 
                 # Ensure action relink
                 if (
@@ -1251,6 +1268,7 @@ class AssetLoader(Loader):
                     and old_datablock.data
                     and old_datablock.data.shape_keys
                     and old_datablock.data.shape_keys.animation_data
+                    and old_datablock.data.shape_keys.animation_data.drivers
                 ):
                     for i, driver in enumerate(
                         new_datablock.data.shape_keys.animation_data.drivers
@@ -1265,6 +1283,10 @@ class AssetLoader(Loader):
                                     .targets[k]
                                     .id
                                 )
+            else:
+                # Remove .old
+                if old_datablock.name.endswith(".old"):
+                    old_datablock.name = old_datablock.name.replace(".old", "")
 
         # Restore parent collection if existing
         for (

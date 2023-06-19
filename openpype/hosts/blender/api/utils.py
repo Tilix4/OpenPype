@@ -30,8 +30,9 @@ BL_TYPE_DATAPATH = (  # TODO rename DATACOL
         bpy.types.Action: "actions",
         bpy.types.Armature: "armatures",
         bpy.types.Material: "materials",
-        bpy.types.NodeTree: "node_groups",
         **{t: "node_groups" for t in NODETREE_TYPES},
+        bpy.types.ParticleSettings: "particles",
+        bpy.types.World: "worlds",
     }
 )
 # Match Blender type to an ICON for display
@@ -43,6 +44,8 @@ BL_TYPE_ICON = {
     bpy.types.Armature: "ARMATURE_DATA",
     bpy.types.Material: "MATERIAL_DATA",
     **{t: "NODETREE" for t in NODETREE_TYPES},
+    bpy.types.ParticleSettings: "PARTICLES",
+    bpy.types.World: "WORLD_DATA",
 }
 
 # Types which can be handled through the outliner
@@ -380,6 +383,7 @@ def get_datablocks_with_filepath(
                 datablock
                 and hasattr(datablock, "filepath")
                 and not datablock.is_property_readonly("filepath")
+                and not datablock.filepath == ""
                 and not datablock.library
                 and not datablock.is_library_indirect
             ):

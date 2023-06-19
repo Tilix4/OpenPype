@@ -29,9 +29,16 @@ from openpype.hosts.blender.api.utils import (
     BL_TYPE_DATAPATH,
     build_op_basename,
     get_parent_collection,
+    get_root_datablocks,
     link_to_collection,
     unlink_from_collection,
 )
+from openpype.hosts.blender.api.utils import make_paths_absolute
+from openpype.lib.path_tools import version_up
+from openpype.hosts.blender.api.lib import add_datablocks_to_container, download_last_workfile
+from openpype.hosts.blender.scripts import build_workfile
+from openpype.lib.path_tools import version_up
+from openpype.modules.base import ModulesManager
 from openpype.pipeline import legacy_io, Anatomy
 from openpype.pipeline.constants import AVALON_INSTANCE_ID
 from openpype.pipeline.create.creator_plugins import (
@@ -45,6 +52,14 @@ from openpype.tools.utils import host_tools
 from openpype.hosts.blender.scripts import build_workfile
 from openpype.tools.utils.lib import qt_app_context
 from .workio import OpenFileCacher, save_file, work_root
+from openpype.pipeline import legacy_io, Anatomy
+from openpype.modules.base import ModulesManager
+from openpype.tools.utils import host_tools
+from .workio import (
+    OpenFileCacher,
+    check_workfile_up_to_date,
+)
+from .lib import download_last_workfile
 
 PREVIEW_COLLECTIONS: Dict = dict()
 
@@ -627,7 +642,7 @@ class SCENE_OT_RemoveOpenpypeInstance(
         # Get creator class
         Creator = get_legacy_creator_by_name(self.creator_name)
 
-        # NOTE Shunting legacy_create because of useless overhead 
+        # NOTE Shunting legacy_create because of useless overhead
         # and deprecated design.
         # Will see if compatible with new creator when implemented for Blender
         avalon_prop = op_instance["avalon"]
@@ -1021,9 +1036,9 @@ class BuildWorkFile(bpy.types.Operator):
 
     def _build_first_workfile(self, clear_scene: bool, save_as: bool):
         """Execute Build First workfile process.
-        
+
         Args:
-            clear_scene (bool): Clear scene content before the build. 
+            clear_scene (bool): Clear scene content before the build.
             save_as (bool): Save as new incremented workfile after the build.
         """
         if clear_scene:
@@ -1089,6 +1104,100 @@ class BuildWorkFile(bpy.types.Operator):
 
     def invoke(self, context, event):
         return bpy.context.window_manager.invoke_props_dialog(self, width=150)
+class WM_OT_CheckWorkfileUpToDate(bpy.types.Operator):
+    """Check if the current workfile is up to date.
+
+    If it's out of date, the workfile out of date dialog will open.
+    Otherwise, a dialog notifying user that their workfile is up to date will
+    appear.
+    """
+
+    bl_idname = "wm.check_workfile_up_to_date"
+    bl_label = "Check Workfile Up To Date"
+
+    action: bpy.props.EnumProperty(
+        name="Action Enum",
+        items=(
+            ("DOWNLOAD", "Download last workfile", "Download last workfile"),
+            ("QUIT", "Quit blender", "Quit blender"),
+            ("PROCEED", "Proceed anyway", "Proceed anyway AT YOUR OWN RISK"),
+        ),
+    )
+
+    def invoke(self, context, _event):
+        """Invoke this operator."""
+        context.scene.is_workfile_up_to_date = check_workfile_up_to_date()
+        if context.scene.is_workfile_up_to_date:
+            return context.window_manager.invoke_popup(self)
+        else:
+            return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        """Draw UI."""
+        if context.scene.is_workfile_up_to_date:
+            layout = self.layout
+            layout.ui_units_x = 7.5
+            layout.label(text="Your workfile is up to date!")
+        else:
+            col = self.layout.column()
+
+            # Display alert
+            row = col.row()
+            row.alert = True
+            row.label(text="Your workfile is out of date.")
+
+            # Display enum
+            col.prop(self, "action", expand=True)
+
+    def execute(self, context):
+        """Execute this operator."""
+        # Check workfile is up to date
+        if context.scene.is_workfile_up_to_date:
+            return {"FINISHED"}
+
+        if self.action == "DOWNLOAD":
+            context.window.cursor_set("WAIT")
+
+            # Get sync server module
+            sync_server = ModulesManager().modules_by_name.get("sync_server")
+            if not sync_server or not sync_server.enabled:
+                self.report(
+                    {"WARNING"},
+                    "Sync server module is disabled or unavailable.",
+                )
+                return {"CANCELLED"}
+
+            last_workfile_path, last_published_time = download_last_workfile()
+            if last_workfile_path:
+                bpy.ops.wm.open_mainfile(filepath=last_workfile_path)
+
+                # Update variables
+                context.scene["op_published_time"] = last_published_time
+                context.scene.is_workfile_up_to_date = True
+
+                # TODO refactor when download_last_workfile split
+                # Remap paths to absolute with source path
+                make_paths_absolute(Path(last_workfile_path))
+
+                bpy.ops.wm.save_mainfile()
+                bpy.ops.wm.revert_mainfile()
+                return {"FINISHED"}
+            else:
+                self.report({"ERROR"}, "Failed to download last workfile.")
+                return {"CANCELLED"}
+        elif self.action == "QUIT":
+            bpy.ops.wm.quit_blender()
+            return {"FINISHED"}
+        elif self.action == "PROCEED":
+            return {"FINISHED"}
+        else:
+            self.report({"ERROR"}, "Undefined enum value error")
+            return {"CANCELLED"}
+
+    def cancel(self, context):
+        """Run when this operator is cancelled."""
+        if not context.scene.is_workfile_up_to_date:
+            bpy.ops.wm.check_workfile_up_to_date("INVOKE_DEFAULT")
 
 
 class TOPBAR_MT_avalon(bpy.types.Menu):
@@ -1101,6 +1210,16 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
         """Draw the menu in the UI."""
 
         layout = self.layout
+
+        # Display workfile out of date warning
+        if not context.scene.is_workfile_up_to_date:
+            row = layout.row()
+            row.operator(
+                WM_OT_CheckWorkfileUpToDate.bl_idname,
+                text="Your workfile is out of date!",
+                icon="ERROR",
+            )
+            layout.separator()
 
         pcoll = PREVIEW_COLLECTIONS.get("avalon")
         if pcoll:
@@ -1133,12 +1252,20 @@ class TOPBAR_MT_avalon(bpy.types.Menu):
         #                'Set Resolution'?
         layout.separator()
         layout.operator(BuildWorkFile.bl_idname, text="Build First Workfile")
+        layout.separator()
+        layout.operator(WM_OT_CheckWorkfileUpToDate.bl_idname)
 
 
 def draw_avalon_menu(self, context):
     """Draw the Avalon menu in the top bar."""
 
-    self.layout.menu(TOPBAR_MT_avalon.bl_idname)
+    self.layout.menu(
+        TOPBAR_MT_avalon.bl_idname,
+        icon="ERROR"
+        if not context.scene.is_workfile_up_to_date
+        else "NONE",
+    )
+
 
 
 class SCENE_OT_MakeContainerPublishable(bpy.types.Operator):
@@ -1195,8 +1322,9 @@ class SCENE_OT_MakeContainerPublishable(bpy.types.Operator):
         avalon_data = dict(container["avalon"])
 
         # Expose container content and get neutral outliner entity
-        root_outliner_datablocks = expose_container_content(
-            self.container_name
+        datablocks = expose_container_content(self.container_name)
+        root_outliner_datablocks = get_root_datablocks(
+            datablocks, tuple(BL_OUTLINER_TYPES)
         )
 
         # Get creator name
@@ -1206,6 +1334,19 @@ class SCENE_OT_MakeContainerPublishable(bpy.types.Operator):
             if creator_attrs["family"] == avalon_data.get("family"):
                 break
 
+        # Set args for outliner container
+        if root_outliner_datablocks:
+            outliner_args = {
+                "gather_into_collection": any(
+                    isinstance(datablock, bpy.types.Collection)
+                    for datablock in datablocks
+                ),
+                "datapath": "collections",
+                "datablock_name": list(datablocks)[0].name,
+            }
+        else:
+            outliner_args = {}
+
         # Create new instance
         bpy.ops.scene.create_openpype_instance(
             creator_name=creator_name,
@@ -1213,20 +1354,15 @@ class SCENE_OT_MakeContainerPublishable(bpy.types.Operator):
             if self.convert_to_current_asset
             else avalon_data["asset_name"],
             subset_name=avalon_data["name"],
-            gather_into_collection=any(
-                isinstance(datablock, bpy.types.Collection)
-                for datablock in root_outliner_datablocks
-            ),
             use_selection=False,
-            datapath="collections",
-            datablock_name=root_outliner_datablocks[0].name,
+            **outliner_args,
         )
 
         # Reassign container datablocks to new instance
         add_datablocks_to_container(
             [
                 d
-                for d in root_outliner_datablocks
+                for d in get_root_datablocks(datablocks)
                 if d
                 not in bpy.context.scene.openpype_instances[-1].get_datablocks(
                     bpy.types.Collection
@@ -1252,11 +1388,12 @@ def expose_container_content(container_name: str) -> List[bpy.types.ID]:
     container = openpype_containers.get(container_name)
 
     # Remove old container
+    datablocks = container.get_datablocks()
     root_outliner_datablocks = container.get_root_outliner_datablocks()
     openpype_containers.remove(openpype_containers.find(container.name))
 
     if not root_outliner_datablocks:
-        return
+        return datablocks
 
     new_root_outliner_datablocks = []
     kept_root_outliner_datablocks = []
@@ -1392,6 +1529,7 @@ classes = [
     LaunchLibrary,
     LaunchWorkFiles,
     BuildWorkFile,
+    WM_OT_CheckWorkfileUpToDate,
     TOPBAR_MT_avalon,
     SCENE_OT_MakeContainerPublishable,
     SCENE_OT_ExposeContainerContent,
@@ -1403,6 +1541,12 @@ classes = [
     SCENE_OT_MoveOpenpypeInstance,
     SCENE_OT_MoveOpenpypeInstanceDatablock,
 ]
+
+
+def update_workfile_up_to_date():
+    """Check regularily the current workfile is up-to-date."""
+    bpy.context.scene.is_workfile_up_to_date = check_workfile_up_to_date()
+    return 60 * 10
 
 
 def register():
@@ -1424,6 +1568,18 @@ def register():
     # Hack to store creators with parameters for optimization purpose
     bpy.app.handlers.load_post.append(discover_creators_handler)
 
+    # Regularily check the workfile is up-to-date
+    bpy.app.timers.register(
+        update_workfile_up_to_date, first_interval=0, persistent=True
+    )
+
+    # Use a timer to delay execution of check_workfile_up_to_date
+    def delayed_check_workfile_up_to_date():
+        if hasattr(
+            bpy.types, bpy.ops.wm.check_workfile_up_to_date.idname()
+        ):
+            bpy.ops.wm.check_workfile_up_to_date("INVOKE_DEFAULT")
+    bpy.app.timers.register(delayed_check_workfile_up_to_date, persistent=True)
 
 def unregister():
     """Unregister the operators and menu."""
@@ -1433,3 +1589,5 @@ def unregister():
     bpy.types.TOPBAR_MT_editor_menus.remove(draw_avalon_menu)
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
+
+    bpy.app.timers.unregister(check_workfile_up_to_date)

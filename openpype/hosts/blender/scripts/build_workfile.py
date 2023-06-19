@@ -16,6 +16,7 @@ from openpype.client.entities import (
     get_representation_by_id,
     get_version_by_id,
 )
+from openpype.hosts.blender.api.lib import add_datablocks_to_container
 from openpype.hosts.blender.api.properties import OpenpypeContainer
 from openpype.hosts.blender.api.lib import (
     add_datablocks_to_container,
@@ -182,6 +183,8 @@ def load_subset(
         Tuple[OpenpypeContainer, Set[bpy.types.ID]]:
             (Container, Datablocks)
     """
+    if not representation:
+        return
 
     all_loaders = discover_loader_plugins(project_name=project_name)
     loaders = loaders_from_representation(all_loaders, representation)
@@ -285,6 +288,9 @@ def download_kitsu_casting(
             if representation:
                 representations.append(representation)
 
+                # Keep kitsu asset type name
+                representation["asset_type_name"] = actor["asset_type_name"]
+
     wait_for_download(project_name, representations)
 
     return representations
@@ -315,6 +321,9 @@ def load_casting(project_name: str, shot_name: str) -> Set[OpenpypeContainer]:
             )
             containers.append(container)
             all_datablocks.update(datablocks)
+
+            # Keep kitsu asset type
+            container["asset_type_name"] = representation["asset_type_name"]
         except TypeError:
             print(
                 f"Cannot load {representation['context']['asset']}"
@@ -445,6 +454,14 @@ def build_layout(project_name, asset_name):
     )
     audio_repre = download_subset(
         project_name, asset_name, "AudioReference", "wav"
+    )
+    concept_repre = download_subset(
+        project_name, asset_name, "ConceptReference", "jpg"
+    )
+    compo_nodes_repre = download_subset(
+        project_name,
+        "CompositingNodesBank",
+        "nodegroupMatteColorCorrect",
     )
 
     # Create layout instance
@@ -585,7 +602,136 @@ def build_layout(project_name, asset_name):
             "Background",
         )
 
+    # Setup cryptomatte
+    bpy.context.scene.view_layers[
+        "ViewLayer"
+    ].use_pass_cryptomatte_asset = True
+    bpy.context.scene.use_nodes = True
+
+    # Load base nodegroup
+    _compo_container, compo_datablocks = load_subset(
+        project_name,
+        compo_nodes_repre,
+        "AppendBlenderNodegroupLoader",
+    )
+
+    # Create instance for compositing node
+    bpy.ops.scene.create_openpype_instance(
+        creator_name="CreateBlenderNodegroup",
+        asset_name=asset_name,
+        subset_name="charactersCompositingNodegroups",
+        datapath="node_groups",
+    )
+
+    # Get compositing instance and disable it
+    compo_instance = bpy.context.scene.openpype_instances[-1]
+    compo_instance.publish = False
+
+    input_image_node = None
+    for container in containers:
+        if (
+            container.get("avalon", {}).get("family") == "rig"
+            and container.get("asset_type_name") == "Character"
+        ):
+            # Setup character compositing with copy of base nodegroup
+            source_compositing_nodegroup = list(compo_datablocks)[0]
+            input_image_node = setup_character_compositing(
+                container.name,
+                source_compositing_nodegroup.copy(),
+                input_image_node,
+            )
+
+            # Mute node
+            input_image_node.mute = True
+
+            # Add compositing nodegroup to instance
+            add_datablocks_to_container(
+                [input_image_node.node_tree], compo_instance
+            )
+
+        # Clear asset type name
+        container.pop("asset_type_name", None)
+
+    # Link last matte color correct node to composite node
+    composite_node = bpy.context.scene.node_tree.nodes["Composite"]
+    bpy.context.scene.node_tree.links.new(
+        input_image_node.outputs["Image"],
+        composite_node.inputs["Image"],
+    )
+
     assert not errors, ";\n\n".join(errors)
+
+
+def setup_character_compositing(
+    character_name: str,
+    compositing_nodegroup: bpy.types.NodeTree,
+    input_image_node: bpy.types.Node,
+) -> bpy.types.NodeTree:
+    """Setup compositing nodes for character.
+
+    Args:
+        character_name (str):  The character to create compositing of.
+        compositing_nodegroup (bpy.types.NodeTree):
+            The source nodegroup to use for compositing.
+        input_image_node (bpy.types.Node):
+            The input image node to use for compositing.
+
+    Returns:
+        bpy.types.NodeTree:  The output image node.
+    """
+    scene = bpy.context.scene
+
+    # Get render layers node
+    render_layer_node = scene.node_tree.nodes.get("Render Layers")
+    assert render_layer_node, "Could not find render layers node"
+
+    # Set render layers node as input image node if not already set
+    if not input_image_node:
+        input_image_node = render_layer_node
+
+    # Create crypto node for character
+    crypto_node = scene.node_tree.nodes.new("CompositorNodeCryptomatteV2")
+    crypto_node.name = f"{character_name}_Cryptomatte"
+
+    # Link render layers to crypto node
+    scene.node_tree.links.new(
+        render_layer_node.outputs["Image"],
+        crypto_node.inputs["Image"],
+    )
+
+    # Set matte id by rig name
+    rig_name = None
+    for obj in bpy.data.collections[character_name].all_objects:
+        if obj.type == "ARMATURE":
+            rig_name = obj.name
+            break
+
+    # If no rig found, print error and skip
+    if not rig_name:
+        print(f"Could not find rig for {character_name}")
+        return
+
+    crypto_node.matte_id = rig_name
+
+    # Create matte color correct node
+    matte_color_correct_node = scene.node_tree.nodes.new("CompositorNodeGroup")
+    matte_color_correct_node.name = f"{character_name}_MatteColorCorrect"
+    compositing_nodegroup.name = f"{character_name}_Compositing"
+    matte_color_correct_node.node_tree = compositing_nodegroup
+
+    # Link crypto node to matte color correct node
+    scene.node_tree.links.new(
+        crypto_node.outputs["Matte"],
+        matte_color_correct_node.inputs["Matte"],
+    )
+
+    # Link input image node to matte color correct node
+    scene.node_tree.links.new(
+        input_image_node.outputs["Image"],
+        matte_color_correct_node.inputs["Image"],
+    )
+
+    return matte_color_correct_node
 
 
 def build_anim(project_name, asset_name):
@@ -713,6 +859,14 @@ def build_anim(project_name, asset_name):
             except (RuntimeError, AssertionError) as err:
                 errors.append(f"Switch failed for {container.name}: {err}")
                 continue
+
+    # Download character compositing nodegroups
+    compo_nodes_repre = download_subset(
+        project_name,
+        asset_name,
+        "charactersCompositingNodegroups",
+    )
+    wait_for_download(project_name, [compo_nodes_repre])
 
     # Substitute overridden GDEFORMER collection by local one
     scene_collections_by_name = {
@@ -845,6 +999,45 @@ def build_anim(project_name, asset_name):
             "load subset AudioReference failed:"
             f" Missing subset for {asset_name}"
         )
+
+    # Setup cryptomatte
+    bpy.context.scene.view_layers[
+        "ViewLayer"
+    ].use_pass_cryptomatte_asset = True
+    bpy.context.scene.use_nodes = True
+
+    # Set compositing from published nodegroups
+    input_image_node = None
+    if compo_nodes_repre:
+        # Load compositing nodegroups
+        char_comp_container, char_comp_datablocks = load_subset(
+            project_name,
+            compo_nodes_repre,
+            "AppendBlenderNodegroupLoader",
+        )
+
+        # Make container publishable, expose its content
+        bpy.ops.scene.make_container_publishable(
+            container_name=char_comp_container.name,
+        )
+        for nodegroup in char_comp_datablocks:
+            # Disable instance for publishing
+            bpy.context.scene.openpype_instances[-1].publish = False
+
+            # Create compositing node tree
+            input_image_node = setup_character_compositing(
+                nodegroup.name.replace("_Compositing", ""),
+                nodegroup,
+                input_image_node,
+            )
+        else:
+            # Link last matte color correct node to composite node
+            if input_image_node:
+                composite_node = bpy.context.scene.node_tree.nodes["Composite"]
+                bpy.context.scene.node_tree.links.new(
+                    input_image_node.outputs["Image"],
+                    composite_node.inputs["Image"],
+                )
 
     assert not errors, ";\n\n".join(errors)
 
