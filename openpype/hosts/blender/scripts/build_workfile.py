@@ -906,7 +906,6 @@ def build_fabrication(project_name: str, asset_name: str):
                 subset["name"],
             )
 
-
     # Wait for downloads to be finished
     wait_for_download(project_name, [light_repre])
     # Load representation
@@ -964,8 +963,13 @@ def build_fabrication(project_name: str, asset_name: str):
             bpy.context.scene.world = bpy.data.worlds[world.name]
 
     # Create CHARACTERS and PROPS collections
-    bpy.context.scene.collection.children.link(bpy.data.collections.new("CHARACTERS"))
-    bpy.context.scene.collection.children.link(bpy.data.collections.new("PROPS"))
+    bpy.context.scene.collection.children.link(
+        bpy.data.collections.new("CHARACTERS")
+    )
+    bpy.context.scene.collection.children.link(
+        bpy.data.collections.new("PROPS")
+    )
+    setdress_collection.children.link(bpy.data.collections.new("SET"))
 
     # Loop through collection
     for collection in bpy.context.scene.collection.children:
@@ -980,6 +984,45 @@ def build_fabrication(project_name: str, asset_name: str):
             )
             # Unlink collection from scene collection
             bpy.context.scene.collection.children.unlink(collection)
+
+    # Common setting for render
+    bpy.context.scene.render.engine = "CYCLES"
+    bpy.context.scene.cycles.device = "GPU"
+    bpy.context.scene.cycles.feature_set = "EXPERIMENTAL"
+    bpy.context.scene.cycles.dicing_rate = 2
+    bpy.context.scene.cycles.max_subdivisions = 8
+    bpy.context.scene.cycles.use_denoising = True
+    bpy.context.scene.cycles.denoiser = "OPTIX"
+    bpy.context.scene.cycles.adaptive_threshold = 0.01
+    bpy.context.scene.cycles.use_auto_tile = True
+    bpy.context.scene.cycles.tile_size = 2048
+    bpy.context.scene.cycles.samples = 1024
+    bpy.context.scene.view_settings.view_transform = "Filmic"
+    bpy.context.scene.render.image_settings.color_mode = "RGB"
+    bpy.context.scene.render.resolution_x = 1920
+    bpy.context.scene.render.resolution_y = 1080
+    bpy.context.scene.render.resolution_percentage = 100
+    bpy.context.scene.render.use_border = False
+    bpy.context.scene.render.use_simplify = False
+    bpy.context.scene.render.use_file_extension = True
+    bpy.context.scene.render.image_settings.file_format = "PNG"
+    bpy.context.scene.render.image_settings.color_depth = "16"
+    bpy.context.scene.render.image_settings.color_mode = "RGB"
+    bpy.context.scene.render.image_settings.compression = 15
+    bpy.context.scene.render.use_stamp = True
+    bpy.context.scene.render.use_stamp_date = True
+    bpy.context.scene.render.use_stamp_time = True
+    bpy.context.scene.render.use_stamp_render_time = True
+    bpy.context.scene.render.use_stamp_frame = False
+    bpy.context.scene.render.use_stamp_frame_range = False
+    bpy.context.scene.render.use_stamp_memory = False
+    bpy.context.scene.render.use_stamp_hostname = True
+    bpy.context.scene.render.use_stamp_camera = False
+    bpy.context.scene.render.use_stamp_lens = False
+    bpy.context.scene.render.use_stamp_scene = False
+    bpy.context.scene.render.use_stamp_marker = False
+    bpy.context.scene.render.use_stamp_filename = False
+    bpy.context.scene.render.use_stamp_sequencer_strip = False
 
 
 def build_render(project_name, asset_name):
@@ -1031,10 +1074,7 @@ def build_workfile():
     asset_name = legacy_io.Session.get("AVALON_ASSET")
     task_name = legacy_io.Session.get("AVALON_TASK").lower()
 
-    if task_name == "fabrication":
-        build_fabrication(project_name, asset_name)
-
-    elif task_name in ("texture", "look", "lookdev", "shader"):
+    if task_name in ("texture", "look", "lookdev", "shader"):
         build_look(project_name, asset_name)
 
     elif task_name in ("rig", "rigging"):
@@ -1052,7 +1092,8 @@ def build_workfile():
     elif task_name in ("lighting", "light", "render", "rendering"):
         build_render(project_name, asset_name)
 
-
+    elif task_name == "fabrication":
+        build_fabrication(project_name, asset_name)
 
     else:
         return False
