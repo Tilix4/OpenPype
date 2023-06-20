@@ -900,16 +900,16 @@ def build_fabrication(project_name: str, asset_name: str):
             subset["name"].strip("lighting").rsplit("_", 1)[0].lower()
         )
         if raw_asset_name == raw_subset_name:
-            representation = download_subset(
+            light_repre = download_subset(
                 project_name,
                 "LightSetupBank",
                 subset["name"],
             )
 
     # Wait for downloads to be finished
-    wait_for_download(project_name, [representation])
+    wait_for_download(project_name, [light_repre])
     # Load representation
-    load_subset(project_name, representation, "AppendBlenderLightingLoader")
+    load_subset(project_name, light_repre, "AppendBlenderLightingLoader")
 
     # Create setdress instance
     bpy.ops.scene.create_openpype_instance(
@@ -934,8 +934,6 @@ def build_fabrication(project_name: str, asset_name: str):
         asset_name=asset_name,
         subset_name="cameraMain",
         gather_into_collection=True,
-        datapath="objects",
-        datablock_name=camera_name,
     )
 
     # Create review instance
@@ -953,11 +951,11 @@ def build_fabrication(project_name: str, asset_name: str):
     camera.location[1] = -100  # This value equal -100 meters on Y axis
     camera.rotation_euler[0] = 1.5708  # Euler value for 90 degrees on X axis
 
-    # Create empty to control camera DOF and rename it
+    # Create empty to control camera DOF, rename it and Link it to cameraMain collection
     dof_ctrl = bpy.data.objects.new("DOF_ctrl_object", None)
-
-    # Link DOF_ctrl to cameraMain collection
     bpy.data.collections[camera_name].objects.link(dof_ctrl)
+    # Set control of camera DOF to DOF_ctrl_object
+    bpy.data.cameras[camera_name].dof.focus_object = dof_ctrl
 
     # Loop through worlds
     for world in bpy.data.worlds:
@@ -965,14 +963,9 @@ def build_fabrication(project_name: str, asset_name: str):
         if raw_asset_name in world.name.lower():
             bpy.context.scene.world = bpy.data.worlds[world.name]
 
-    # Set control of camera DOF to DOF_ctrl_object
-    bpy.data.cameras[camera_name].dof.focus_object = dof_ctrl
-
     # Create CHARACTERS and PROPS collections
-    characters_collection = bpy.data.collections.new("CHARACTERS")
-    bpy.context.scene.collection.children.link(characters_collection)
-    props_collection = bpy.data.collections.new("PROPS")
-    bpy.context.scene.collection.children.link(props_collection)
+    bpy.context.scene.collection.children.link(bpy.data.collections.new("CHARACTERS"))
+    bpy.context.scene.collection.children.link(bpy.data.collections.new("PROPS"))
 
     # Loop through collection
     for collection in bpy.context.scene.collection.children:
@@ -1038,7 +1031,10 @@ def build_workfile():
     asset_name = legacy_io.Session.get("AVALON_ASSET")
     task_name = legacy_io.Session.get("AVALON_TASK").lower()
 
-    if task_name in ("texture", "look", "lookdev", "shader"):
+    if task_name == "fabrication":
+        build_fabrication(project_name, asset_name)
+
+    elif task_name in ("texture", "look", "lookdev", "shader"):
         build_look(project_name, asset_name)
 
     elif task_name in ("rig", "rigging"):
@@ -1056,8 +1052,7 @@ def build_workfile():
     elif task_name in ("lighting", "light", "render", "rendering"):
         build_render(project_name, asset_name)
 
-    elif task_name == "fabrication":
-        build_fabrication(project_name, asset_name)
+
 
     else:
         return False
