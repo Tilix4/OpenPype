@@ -906,6 +906,7 @@ def build_fabrication(project_name: str, asset_name: str):
                 subset["name"],
             )
 
+
     # Wait for downloads to be finished
     wait_for_download(project_name, [light_repre])
     # Load representation
@@ -924,17 +925,16 @@ def build_fabrication(project_name: str, asset_name: str):
         bpy.context.scene.openpype_instances[-1].get_root_outliner_datablocks()
     )[-1]
 
-    # Store camera name for camera instance
-    camera_name = f"{asset_name}_cameraMain"
-
     # Create camera instance
-    # If `camera_name` exists don't create it
     bpy.ops.scene.create_openpype_instance(
         creator_name="CreateCamera",
         asset_name=asset_name,
         subset_name="cameraMain",
         gather_into_collection=True,
     )
+
+    # Store camera name
+    camera_name = f"{asset_name}_cameraMain"
 
     # Create review instance
     bpy.ops.scene.create_openpype_instance(
