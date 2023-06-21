@@ -1,4 +1,7 @@
+from ctypes import windll
 import os
+from pathlib import Path
+import string
 import sys
 import traceback
 from typing import Callable, Dict, List, Optional
@@ -198,6 +201,25 @@ def on_open():
             message_window(
                 "Base file unit scale changed",
                 "Base file unit scale changed to match the project settings.")
+
+    # Windows: Maintain drive letter
+    if sys.platform == "win32":
+
+        def get_drives():
+            drives = {}
+            bitmask = windll.kernel32.GetLogicalDrives()
+            for letter in string.ascii_uppercase:
+                if bitmask & 1:
+                    drives[Path(f"{letter}:").resolve().drive] = f"{letter}:\\"
+                bitmask >>= 1
+
+            return drives
+        drives_map = get_drives()
+
+        for datablock in utils.get_datablocks_with_filepath(relative=False):
+            img_path = Path(datablock.filepath).resolve()
+            matched_letter = drives_map.get(img_path.drive)
+            datablock.filepath = str(Path(matched_letter, *img_path.parts[1:]))
 
 
 @bpy.app.handlers.persistent
