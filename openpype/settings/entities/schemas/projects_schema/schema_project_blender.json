@@ -66,6 +66,19 @@
             ]
         },
         {
+            "type": "dict",
+            "collapsible": true,
+            "key": "build_wokfile",
+            "label": "build workfile",
+            "children": [
+                {
+                    "type": "raw-json",
+                    "key": "render_settings",
+                    "label": "Render Settings"
+                }
+            ]
+        },
+        {
             "type": "schema_template",
             "name": "template_workfile_options",
             "skip_paths": [

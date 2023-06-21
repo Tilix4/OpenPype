@@ -22,6 +22,7 @@ from openpype.hosts.blender.api.lib import (
     add_datablocks_to_container,
     update_scene_containers,
 )
+from openpype.settings.lib import get_project_settings
 from openpype.hosts.blender.api.utils import BL_TYPE_DATAPATH
 from openpype.lib.local_settings import get_local_site_id
 from openpype.modules import ModulesManager
@@ -984,45 +985,23 @@ def build_fabrication(project_name: str, asset_name: str):
             )
             # Unlink collection from scene collection
             bpy.context.scene.collection.children.unlink(collection)
+    project_setting = get_project_settings(project_name)
+    render_settings = project_setting["blender"]["build_workfile"].get("render_settings")
+    _apply_settings(bpy.context.scene, render_settings)
 
-    # Common setting for render
-    bpy.context.scene.render.engine = "CYCLES"
-    bpy.context.scene.cycles.device = "GPU"
-    bpy.context.scene.cycles.feature_set = "EXPERIMENTAL"
-    bpy.context.scene.cycles.dicing_rate = 2
-    bpy.context.scene.cycles.max_subdivisions = 8
-    bpy.context.scene.cycles.use_denoising = True
-    bpy.context.scene.cycles.denoiser = "OPTIX"
-    bpy.context.scene.cycles.adaptive_threshold = 0.01
-    bpy.context.scene.cycles.use_auto_tile = True
-    bpy.context.scene.cycles.tile_size = 2048
-    bpy.context.scene.cycles.samples = 1024
-    bpy.context.scene.view_settings.view_transform = "Filmic"
-    bpy.context.scene.render.image_settings.color_mode = "RGB"
-    bpy.context.scene.render.resolution_x = 1920
-    bpy.context.scene.render.resolution_y = 1080
-    bpy.context.scene.render.resolution_percentage = 100
-    bpy.context.scene.render.use_border = False
-    bpy.context.scene.render.use_simplify = False
-    bpy.context.scene.render.use_file_extension = True
-    bpy.context.scene.render.image_settings.file_format = "PNG"
-    bpy.context.scene.render.image_settings.color_depth = "16"
-    bpy.context.scene.render.image_settings.color_mode = "RGB"
-    bpy.context.scene.render.image_settings.compression = 15
-    bpy.context.scene.render.use_stamp = True
-    bpy.context.scene.render.use_stamp_date = True
-    bpy.context.scene.render.use_stamp_time = True
-    bpy.context.scene.render.use_stamp_render_time = True
-    bpy.context.scene.render.use_stamp_frame = False
-    bpy.context.scene.render.use_stamp_frame_range = False
-    bpy.context.scene.render.use_stamp_memory = False
-    bpy.context.scene.render.use_stamp_hostname = True
-    bpy.context.scene.render.use_stamp_camera = False
-    bpy.context.scene.render.use_stamp_lens = False
-    bpy.context.scene.render.use_stamp_scene = False
-    bpy.context.scene.render.use_stamp_marker = False
-    bpy.context.scene.render.use_stamp_filename = False
-    bpy.context.scene.render.use_stamp_sequencer_strip = False
+def _apply_settings(entity, settings):
+    """Apply settings for given entity.
+
+    Arguments:
+        entity (bpy.types.bpy_struct): The entity.
+        settings (dict): Dict of settings.
+    """
+    for option, value in settings.items():
+        if hasattr(entity, option):
+            if isinstance(value, dict):
+                _apply_settings(getattr(entity, option), value)
+            else:
+                setattr(entity, option, value)
 
 
 def build_render(project_name, asset_name):
