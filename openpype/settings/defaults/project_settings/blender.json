@@ -18,54 +18,6 @@
         "compress": false,
         "use_paths_management": false
     },
-    "build_workfile": {
-        "render_settings": {
-            "render":{
-                "engine":"CYCLES",
-                "image_settings": {
-                    "color_mode": "RGB",
-                    "file_format": "PNG",
-                    "color_depth": "16",
-                    "compression": 15
-                },
-                "resolution_x": 1920,
-                "resolution_y": 1080,
-                "resolution_percentage": 100,
-                "use_border": false,
-                "use_simplify": false,
-                "use_file_extension": true,
-                "use_stamp": true,
-                "use_stamp_date": true,
-                "use_stamp_time": true,
-                "use_stamp_render_time": true,
-                "use_stamp_frame": false,
-                "use_stamp_frame_range": false,
-                "use_stamp_memory": false,
-                "use_stamp_hostname": true,
-                "use_stamp_camera": false,
-                "use_stamp_lens": false,
-                "use_stamp_scene": false,
-                "use_stamp_marker": false,
-                "use_stamp_filename": false,
-                "use_stamp_sequencer_strip": false
-            },
-            "cycles":{
-                "device": "GPU",
-                "feature_set": "EXPERIMENTAL",
-                "dicing_rate": 2,
-                "max_subdivions": 8,
-                "use_denoising": true,
-                "denoiser": "OPTIX",
-                "adaptive_threshold": 0.01,
-                "use_auto_tile": true,
-                "tile_size": 2048,
-                "samples": 1024
-            },
-            "view_settings":{
-                "view_transform": "Filmic"
-            }
-        }
-    },
     "workfile_builder": {
         "create_first_version": false,
         "custom_templates": []

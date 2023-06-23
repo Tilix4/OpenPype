@@ -986,7 +986,7 @@ def build_fabrication(project_name: str, asset_name: str):
             # Unlink collection from scene collection
             bpy.context.scene.collection.children.unlink(collection)
     project_setting = get_project_settings(project_name)
-    render_settings = project_setting["blender"]["build_workfile"].get("render_settings")
+    render_settings = project_setting["project_settings/normaal_addon"]["build_workfile"].get("render_preset")
     _apply_settings(bpy.context.scene, render_settings)
 
 def _apply_settings(entity, settings):
