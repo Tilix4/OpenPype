@@ -23,7 +23,7 @@ from openpype.hosts.blender.api.lib import (
     update_scene_containers,
 )
 from openpype.settings.lib import get_project_settings
-from openpype.hosts.blender.api.utils import BL_TYPE_DATAPATH
+from openpype.hosts.blender.api.utils import BL_TYPE_DATAPATH, apply_settings
 from openpype.lib.local_settings import get_local_site_id
 from openpype.modules import ModulesManager
 from openpype.pipeline import (
@@ -960,11 +960,11 @@ def build_fabrication(project_name: str, asset_name: str):
     # Set control of camera DOF to DOF_ctrl_object
     bpy.data.cameras[camera_name].dof.focus_object = dof_ctrl
 
-    # Loop through worlds
+    # Set scene world and add it to setdres instance
     for world in bpy.data.worlds:
-        # Check if a world exist with the right name and apply it
+        # Match world by name
         if raw_asset_name in world.name.lower():
-            bpy.context.scene.world = bpy.data.worlds[world.name]
+            bpy.context.scene.world = world
             bpy.ops.scene.add_to_openpype_instance(
                 creator_name="CreateWoollySetdress",
                 instance_name=setdress_collection.name,
@@ -1055,7 +1055,10 @@ def build_workfile():
     asset_name = legacy_io.Session.get("AVALON_ASSET")
     task_name = legacy_io.Session.get("AVALON_TASK").lower()
 
-    if task_name in ("texture", "look", "lookdev", "shader"):
+    if task_name == "fabrication":
+        build_fabrication(project_name, asset_name)
+
+    elif task_name in ("texture", "look", "lookdev", "shader"):
         build_look(project_name, asset_name)
 
     elif task_name in ("rig", "rigging"):
@@ -1072,9 +1075,6 @@ def build_workfile():
 
     elif task_name in ("lighting", "light", "render", "rendering"):
         build_render(project_name, asset_name)
-
-    elif task_name == "fabrication":
-        build_fabrication(project_name, asset_name)
 
     else:
         return False
