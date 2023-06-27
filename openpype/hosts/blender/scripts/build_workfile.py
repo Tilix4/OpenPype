@@ -936,10 +936,8 @@ def build_fabrication(project_name: str, asset_name: str):
         gather_into_collection=True,
     )
 
-    # Store camera name
-    camera_name = f"{asset_name}_cameraMain"
-
     # Create review instance
+    camera_name = f"{asset_name}_cameraMain"
     bpy.ops.scene.create_openpype_instance(
         creator_name="CreateReview",
         asset_name=asset_name,
@@ -975,7 +973,7 @@ def build_fabrication(project_name: str, asset_name: str):
                 datablock_name=world.name,
             )
 
-    # Create CHARACTERS and PROPS collections
+    # Create CHARACTERS, PROPS and SET collections
     bpy.context.scene.collection.children.link(
         bpy.data.collections.new("CHARACTERS")
     )
@@ -984,7 +982,7 @@ def build_fabrication(project_name: str, asset_name: str):
     )
     setdress_collection.children.link(bpy.data.collections.new("SET"))
 
-    # Loop through collection
+    # Find light collection to move into setdress collection
     for collection in bpy.context.scene.collection.children:
         # Find if one is for lights
         if "LightSetupBank" in collection.name:
