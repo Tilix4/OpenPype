@@ -894,6 +894,8 @@ def build_fabrication(project_name: str, asset_name: str):
         fields=["_id", "name", "data"],
     )
 
+    # Initialize light_repre
+    light_repre = None
     # Match and download and load subset
     for subset in subsets:
         raw_asset_name = asset_name.split("_")[0].lower()
@@ -907,10 +909,11 @@ def build_fabrication(project_name: str, asset_name: str):
                 subset["name"],
             )
 
-    # Wait for downloads to be finished
-    wait_for_download(project_name, [light_repre])
-    # Load representation
-    load_subset(project_name, light_repre, "AppendBlenderLightingLoader")
+    if light_repre:
+        # Wait for downloads to be finished
+        wait_for_download(project_name, [light_repre])
+        # Load representation
+        load_subset(project_name, light_repre, "AppendBlenderLightingLoader")
 
     # Create setdress instance
     bpy.ops.scene.create_openpype_instance(
@@ -962,6 +965,15 @@ def build_fabrication(project_name: str, asset_name: str):
         # Check if a world exist with the right name and apply it
         if raw_asset_name in world.name.lower():
             bpy.context.scene.world = bpy.data.worlds[world.name]
+            bpy.ops.scene.add_to_openpype_instance(
+                creator_name="CreateWoollySetdress",
+                instance_name=setdress_collection.name,
+                variant_name="Main",
+                variant_default="Main",
+                compatible_with_outliner=True,
+                datapath="worlds",
+                datablock_name=world.name,
+            )
 
     # Create CHARACTERS and PROPS collections
     bpy.context.scene.collection.children.link(
@@ -985,23 +997,13 @@ def build_fabrication(project_name: str, asset_name: str):
             )
             # Unlink collection from scene collection
             bpy.context.scene.collection.children.unlink(collection)
+
+    # Apply preset settings for render
     project_setting = get_project_settings(project_name)
-    render_settings = project_setting["project_settings/normaal_addon"]["build_workfile"].get("render_preset")
-    _apply_settings(bpy.context.scene, render_settings)
-
-def _apply_settings(entity, settings):
-    """Apply settings for given entity.
-
-    Arguments:
-        entity (bpy.types.bpy_struct): The entity.
-        settings (dict): Dict of settings.
-    """
-    for option, value in settings.items():
-        if hasattr(entity, option):
-            if isinstance(value, dict):
-                _apply_settings(getattr(entity, option), value)
-            else:
-                setattr(entity, option, value)
+    render_settings = project_setting["normaal_addon"]["build_workfile"].get(
+        "render_preset"
+    )
+    apply_settings(bpy.context.scene, render_settings)
 
 
 def build_render(project_name, asset_name):
