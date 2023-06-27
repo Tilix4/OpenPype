@@ -7,6 +7,8 @@ import contextlib
 import bpy
 from pathlib import Path
 
+from openpype.hosts.blender.api.utils import apply_settings
+
 from .lib import maintained_time, maintained_selection, maintained_visibility
 from .plugin import deselect_all, context_override
 
@@ -172,22 +174,6 @@ def isolate_objects(window, objects, focus=None):
         bpy.ops.view3d.view_selected(use_all_regions=False)
     deselect_all()
 
-
-def _apply_settings(entity, settings):
-    """Apply settings for given entity.
-
-    Arguments:
-        entity (bpy.types.bpy_struct): The entity.
-        settings (dict): Dict of settings.
-    """
-    for option, value in settings.items():
-        if hasattr(entity, option):
-            if isinstance(value, dict):
-                _apply_settings(getattr(entity, option), value)
-            else:
-                setattr(entity, option, value)
-
-
 def _get_current_settings(entity, settings):
     """Get current settings for given entity.
 
@@ -239,7 +225,7 @@ def applied_view(window, camera, isolate=None, focus=None, options=None):
         space.region_3d.view_perspective = "CAMERA"
 
     if isinstance(options, dict):
-        _apply_settings(space, options)
+        apply_settings(space, options)
     else:
         space.shading.type = "SOLID"
         space.shading.color_type = "MATERIAL"
@@ -260,13 +246,13 @@ def applied_preset_settings(window, settings):
     old_settings = _get_current_settings(window.scene, settings)
 
     # Apply settings
-    _apply_settings(window.scene, settings)
+    apply_settings(window.scene, settings)
 
     try:
         yield
     finally:
         # Restore previous settings
-        _apply_settings(window.scene, old_settings)
+        apply_settings(window.scene, old_settings)
 
 
 @contextlib.contextmanager
