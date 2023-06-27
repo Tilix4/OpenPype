@@ -486,7 +486,7 @@ def get_used_datablocks(
         if users & user_datablocks
     }
 
-def apply_settings(entity, settings):
+def apply_settings(entity: bpy.types.struct, settings: dict):
     """Apply settings for given entity.
 
     Arguments:
