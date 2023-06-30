@@ -902,19 +902,31 @@ def build_fabrication(project_name: str, asset_name: str):
         raw_subset_name = (
             subset["name"].strip("lighting").rsplit("_", 1)[0].lower()
         )
-        if raw_asset_name == raw_subset_name:
+        if raw_subset_name in raw_asset_name:
             light_repre = download_subset(
                 project_name,
                 "LightSetupBank",
                 subset["name"],
             )
 
+    concept_repre = None
+    # Download concept reference
+    concept_repre = download_subset(
+        project_name, asset_name, "ConceptReference", "jpg"
+    )
+
+    if concept_repre is None:
+        # Wait for downloads to be finished
+        concept_repre = download_subset(
+            project_name, asset_name, "ConceptReference", "png"
+        )
+
     if light_repre:
         # Wait for downloads to be finished
         wait_for_download(project_name, [light_repre])
         # Load representation
         load_subset(project_name, light_repre, "AppendBlenderLightingLoader")
-
+    
     # Create setdress instance
     bpy.ops.scene.create_openpype_instance(
         creator_name="CreateWoollySetdress",
@@ -935,6 +947,12 @@ def build_fabrication(project_name: str, asset_name: str):
         subset_name="cameraMain",
         gather_into_collection=True,
     )
+
+    if concept_repre:
+        # Wait for downloads to be finished
+        wait_for_download(project_name, [concept_repre])
+        # Load representation
+        load_subset(project_name, concept_repre, "Background")
 
     # Create review instance
     camera_name = f"{asset_name}_cameraMain"
@@ -1002,7 +1020,6 @@ def build_fabrication(project_name: str, asset_name: str):
         "render_preset"
     )
     apply_settings(bpy.context.scene, render_settings)
-
 
 def build_render(project_name, asset_name):
     """Build render workfile.
