@@ -909,9 +909,8 @@ def build_fabrication(project_name: str, asset_name: str):
                 subset["name"],
             )
 
-    # Initialize concept_repre
-    concept_repre = None
     # Download concept reference
+    concept_repre = None
     concept_repre = download_subset(
         project_name, asset_name, "ConceptReference", "jpg"
     )
