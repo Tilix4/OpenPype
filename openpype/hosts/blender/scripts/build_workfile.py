@@ -914,16 +914,15 @@ def build_fabrication(project_name: str, asset_name: str):
     concept_repre = download_subset(
         project_name, asset_name, "ConceptReference", "jpg"
     )
-
     if concept_repre is None:
-        # Wait for downloads to be finished
         concept_repre = download_subset(
             project_name, asset_name, "ConceptReference", "png"
         )
 
+    # Wait for downloads to be finished
+    wait_for_download(project_name, [light_repre, concept_repre])
+
     if light_repre:
-        # Wait for downloads to be finished
-        wait_for_download(project_name, [light_repre])
         # Load representation
         load_subset(project_name, light_repre, "AppendBlenderLightingLoader")
     
@@ -949,8 +948,6 @@ def build_fabrication(project_name: str, asset_name: str):
     )
 
     if concept_repre:
-        # Wait for downloads to be finished
-        wait_for_download(project_name, [concept_repre])
         # Load representation
         load_subset(project_name, concept_repre, "Background")
 
