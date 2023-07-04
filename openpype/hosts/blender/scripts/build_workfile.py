@@ -902,7 +902,7 @@ def build_fabrication(project_name: str, asset_name: str):
         raw_subset_name = (
             subset["name"].strip("lighting").rsplit("_", 1)[0].lower()
         )
-        if raw_subset_name in raw_asset_name:
+        if raw_asset_name.startswith(raw_subset_name):
             light_repre = download_subset(
                 project_name,
                 "LightSetupBank",
