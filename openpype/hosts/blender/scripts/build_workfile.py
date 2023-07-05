@@ -14,6 +14,7 @@ from openpype.client.entity_links import get_linked_representation_id
 from openpype.client.entities import (
     get_representation_by_name,
     get_representation_by_id,
+    get_subsets,
     get_version_by_id,
 )
 from openpype.hosts.blender.api.properties import OpenpypeContainer
@@ -21,7 +22,8 @@ from openpype.hosts.blender.api.lib import (
     add_datablocks_to_container,
     update_scene_containers,
 )
-from openpype.hosts.blender.api.utils import BL_TYPE_DATAPATH
+from openpype.settings.lib import get_project_settings
+from openpype.hosts.blender.api.utils import BL_TYPE_DATAPATH, apply_settings
 from openpype.lib.local_settings import get_local_site_id
 from openpype.modules import ModulesManager
 from openpype.pipeline import (
@@ -874,6 +876,148 @@ def build_lipsync(project_name: str, shot_name: str):
             )
 
 
+def build_fabrication(project_name: str, asset_name: str):
+    """Build fabrication workfile.
+
+    Args:
+        project_name (str): The current project name from OpenPype Session.
+        asset_name (str): The current asset name from OpenPype Session.
+    """
+
+    # Get subsets
+    asset_doc = get_asset_by_name(
+        project_name, "LightSetupBank", fields=["_id"]
+    )
+    subsets = get_subsets(
+        project_name,
+        asset_ids={asset_doc["_id"]},
+        fields=["_id", "name", "data"],
+    )
+
+    # Initialize light_repre
+    light_repre = None
+    # Match and download and load subset
+    for subset in subsets:
+        raw_asset_name = asset_name.split("_")[0].lower()
+        raw_subset_name = (
+            subset["name"].strip("lighting").rsplit("_", 1)[0].lower()
+        )
+        if raw_asset_name.startswith(raw_subset_name):
+            light_repre = download_subset(
+                project_name,
+                "LightSetupBank",
+                subset["name"],
+            )
+
+    # Download concept reference
+    concept_repre = None
+    concept_repre = download_subset(
+        project_name, asset_name, "ConceptReference", "jpg"
+    )
+    if concept_repre is None:
+        concept_repre = download_subset(
+            project_name, asset_name, "ConceptReference", "png"
+        )
+
+    # Wait for downloads to be finished
+    wait_for_download(project_name, [light_repre, concept_repre])
+
+    if light_repre:
+        # Load representation
+        load_subset(project_name, light_repre, "AppendBlenderLightingLoader")
+    
+    # Create setdress instance
+    bpy.ops.scene.create_openpype_instance(
+        creator_name="CreateWoollySetdress",
+        asset_name=asset_name,
+        subset_name="setdressMain",
+        gather_into_collection=True,
+    )
+
+    # Store setdress instance
+    setdress_collection = list(
+        bpy.context.scene.openpype_instances[-1].get_root_outliner_datablocks()
+    )[-1]
+
+    # Create camera instance
+    bpy.ops.scene.create_openpype_instance(
+        creator_name="CreateCamera",
+        asset_name=asset_name,
+        subset_name="cameraMain",
+        gather_into_collection=True,
+    )
+
+    if concept_repre:
+        # Load representation
+        load_subset(project_name, concept_repre, "Background")
+
+    # Create review instance
+    camera_name = f"{asset_name}_cameraMain"
+    bpy.ops.scene.create_openpype_instance(
+        creator_name="CreateReview",
+        asset_name=asset_name,
+        subset_name="reviewMain",
+        datapath="collections",
+        datablock_name=camera_name,
+    )
+
+    # Camera preset
+    camera = bpy.data.objects[camera_name]
+    camera.data.lens = 200  # 200 milimeters
+    camera.location[1] = -100  # This value equal -100 meters on Y axis
+    camera.rotation_euler[0] = 1.5708  # Euler value for 90 degrees on X axis
+
+    # Create empty to control camera DOF, rename it and Link it to cameraMain collection
+    dof_ctrl = bpy.data.objects.new("DOF_ctrl_object", None)
+    bpy.data.collections[camera_name].objects.link(dof_ctrl)
+    # Set control of camera DOF to DOF_ctrl_object
+    bpy.data.cameras[camera_name].dof.focus_object = dof_ctrl
+
+    # Set scene world and add it to setdres instance
+    for world in bpy.data.worlds:
+        # Match world by name
+        if raw_asset_name in world.name.lower():
+            bpy.context.scene.world = world
+            bpy.ops.scene.add_to_openpype_instance(
+                creator_name="CreateWoollySetdress",
+                instance_name=setdress_collection.name,
+                variant_name="Main",
+                variant_default="Main",
+                compatible_with_outliner=True,
+                datapath="worlds",
+                datablock_name=world.name,
+            )
+
+    # Create CHARACTERS, PROPS and SET collections
+    bpy.context.scene.collection.children.link(
+        bpy.data.collections.new("CHARACTERS")
+    )
+    bpy.context.scene.collection.children.link(
+        bpy.data.collections.new("PROPS")
+    )
+    setdress_collection.children.link(bpy.data.collections.new("SET"))
+
+    # Find light collection to move into setdress collection
+    for collection in bpy.context.scene.collection.children:
+        # Find if one is for lights
+        if "LightSetupBank" in collection.name:
+            # Set color_tag, name
+            collection.color_tag = "NONE"
+            collection.name = "LIGHTING"
+            # Link collection to setdress collection
+            bpy.data.collections[setdress_collection.name].children.link(
+                collection
+            )
+            # Unlink collection from scene collection
+            bpy.context.scene.collection.children.unlink(collection)
+
+    # Apply preset settings for render
+    project_setting = get_project_settings(project_name)
+    render_settings = project_setting["normaal_addon"]["build_workfile"].get(
+        "render_preset"
+    )
+    apply_settings(bpy.context.scene, render_settings)
+
 def build_render(project_name, asset_name):
     """Build render workfile.
 
@@ -923,8 +1067,8 @@ def build_workfile():
     asset_name = legacy_io.Session.get("AVALON_ASSET")
     task_name = legacy_io.Session.get("AVALON_TASK").lower()
 
-    if task_name in ("model", "modeling", "fabrication"):
-        build_model(project_name, asset_name)
+    if task_name == "fabrication":
+        build_fabrication(project_name, asset_name)
 
     elif task_name in ("texture", "look", "lookdev", "shader"):
         build_look(project_name, asset_name)
