@@ -1,4 +1,5 @@
 from itertools import chain
+from pathlib import Path
 import bpy
 
 import pyblish.api
@@ -6,7 +7,6 @@ from openpype.hosts.blender.api.utils import (
     BL_OUTLINER_TYPES,
     get_all_outliner_children,
 )
-from openpype.pipeline import legacy_io
 
 
 class CollectReview(pyblish.api.InstancePlugin):
@@ -51,9 +51,20 @@ class CollectReview(pyblish.api.InstancePlugin):
                 "filename": sequence.sound.filepath,
             }
             for sequence in bpy.context.scene.sequence_editor.sequences
-            if sequence.type == "SOUND" and sequence.volume > 0
+            if (
+                sequence.type == "SOUND"
+                and sequence.volume > 0
+                and sequence.sound
+                and sequence.sound.filepath
+            )
         ]
         self.log.debug(f"audio: {audio_tracks}")
+        # Check if audio files exist
+        for audio in audio_tracks:
+            if not Path(audio["filename"]).exists():
+                self.log.error(
+                    "audio file doesn't exist: %s", audio["filename"]
+                )
 
         # get isolate objects list from meshes instance members .
         isolate_objects = [
