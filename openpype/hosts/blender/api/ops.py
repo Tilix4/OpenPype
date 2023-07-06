@@ -1026,9 +1026,9 @@ class BuildWorkFile(bpy.types.Operator):
 
     def _build_first_workfile(self, clear_scene: bool, save_as: bool):
         """Execute Build First workfile process.
-        
+
         Args:
-            clear_scene (bool): Clear scene content before the build. 
+            clear_scene (bool): Clear scene content before the build.
             save_as (bool): Save as new incremented workfile after the build.
         """
         if clear_scene:
@@ -1042,6 +1042,9 @@ class BuildWorkFile(bpy.types.Operator):
                 bpy.data.objects.remove(obj)
             for collection in set(bpy.data.collections):
                 bpy.data.collections.remove(collection)
+            # clear sequencer
+            for seq in bpy.context.scene.sequence_editor.sequences:
+                bpy.context.scene.sequence_editor.sequences.remove(seq)
             # purgne unused datablock
             while bpy.data.orphans_purge(
                 do_local_ids=False, do_recursive=True
