@@ -342,26 +342,21 @@ def load_references(
     """
     errors = []
 
-    # load the board mov as image background linked into the camera
-    if board_repre:
-        load_subset(project_name, board_repre, "Background")
-    else:
-        errors.append(
-            "load subset BoardReference failed:"
-            f" Missing subset for {asset_name}"
-        )
-
-    # Delete sound sequence from board mov
-    if len(bpy.context.scene.sequence_editor.sequences) > 0:
-        if sound_seq := bpy.context.scene.sequence_editor.sequences[-1]:
-            bpy.context.scene.sequence_editor.sequences.remove(sound_seq)
-
     # load the audio reference as sound into sequencer
     if audio_repre:
         load_subset(project_name, audio_repre, "Audio")
     else:
         errors.append(
             "load subset AudioReference failed:"
+            f" Missing subset for {asset_name}"
+        )
+
+    # load the board mov as image background linked into the camera
+    if board_repre:
+        load_subset(project_name, board_repre, "Background")
+    else:
+        errors.append(
+            "load subset BoardReference failed:"
             f" Missing subset for {asset_name}"
         )
 
