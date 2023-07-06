@@ -419,15 +419,15 @@ def create_gdeformer_collection(parent_collection: bpy.types.Collection):
         parent_collection (bpy.types.Collection): Collection to create GDEFORMER col in
     """
 
-    # Create GDEFORMER Collection
+    # Create and populate GDEFORMER Collection
     gdeformer_col = None
     for obj in bpy.context.scene.objects:
         if obj.name.startswith("GDEFORM"):
-            # Check if the GDEFORMER collection exists to create it and link it to the parent collection in args only once
+            # Create GDEFORMER collection at first loop
             if not gdeformer_col:
                 gdeformer_col = bpy.data.collections.new("GDEFORMER")
                 parent_collection.children.link(gdeformer_col)
-            # Link GDEFORM objects to the GDEFORMER collection
+            # Link object to the GDEFORMER collection
             gdeformer_col.objects.link(obj)
 
         # Assign collection to sol(s) object(s)
