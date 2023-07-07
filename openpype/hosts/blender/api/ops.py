@@ -1051,8 +1051,11 @@ class BuildWorkFile(bpy.types.Operator):
             ):
                 pass
             # clear all libraries
-            for library in list(bpy.data.libraries):
+            for library in bpy.data.libraries:
                 bpy.data.libraries.remove(library)
+            # Clear all worlds
+            for world in bpy.data.worlds:
+                bpy.data.worlds.remove(world)
 
         print("Build Workfile")
         build_workfile()
