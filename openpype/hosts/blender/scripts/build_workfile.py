@@ -226,6 +226,7 @@ def download_kitsu_casting(
     project_name: str,
     shot_name: str,
     asset_types: List[str] = None,
+    hero: bool = True,
 ) -> List[dict]:
     """Download kitsu casting
 
@@ -234,6 +235,8 @@ def download_kitsu_casting(
         shot_name (str): Current shot name from OpenPype Session.
         asset_types (List[str]): Asset types to include.
             All supported asset types if none provided. Defaults to None.
+        hero (bool): If True assets are loaded in hero version.
+            Defaults to True.
 
     Returns:
         list: Representations.
@@ -275,14 +278,14 @@ def download_kitsu_casting(
 
             # Download subset
             representation = download_subset(
-                project_name, actor["asset_name"], subset_name, hero=True
+                project_name, actor["asset_name"], subset_name, hero=hero
             )
             if not representation and actor["asset_type_name"] in (
                 "Bidulo",
                 "Props",
             ):
                 representation = download_subset(
-                    project_name, actor["asset_name"], "modelMain"
+                    project_name, actor["asset_name"], "modelMain", hero=hero
                 )
             if representation:
                 representations.append(representation)
