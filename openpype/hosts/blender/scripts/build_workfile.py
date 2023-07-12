@@ -473,6 +473,38 @@ def build_layout(project_name, asset_name):
 
         # Link loaded containers to layout collection
         for container in containers:
+            container_metadata = container.get("avalon", {})
+            if container_metadata.get("family") == "rig":
+                boop = (
+                    datablock
+                    for datablock in container.datablock_refs
+                    if isinstance(datablock, bpy.types.Collection)
+                )
+                lips_action = download_and_load_subset(
+                    project_name,
+                    asset_name,
+                    f"animation{container_metadata.get('asset_name')}_lipsync",
+                    "LinkAnimationLoader",
+                )
+
+                if lips_action:
+                    character_rig = next(
+                        (
+                            obj
+                            for obj in (
+                                datablock.children_recursive
+                                for datablock in container.datablock_refs
+                                if isinstance(datablock, bpy.types.Collection)
+                            )
+                            if obj.type == "ARMATURE"
+                        ),
+                        None,
+                    )
+                    if character_rig:
+                        character_rig.animation_data.nla_tracks.active.strips.new(
+                            "Lipsync", lips_action.frame_start, lips_action
+                        )
+
             for root in container.get_root_datablocks(bpy.types.Collection):
                 if root not in layout_collection.children.values():
                     layout_collection.children.link(root)
