@@ -484,19 +484,26 @@ def build_layout(project_name, asset_name):
                 lips_action = None
                 if lips_anim_repre:
                     wait_for_download(project_name, [lips_anim_repre])
-                    lips_action =  load_subset(
-                        project_name,
-                        lips_anim_repre,
-                        "LinkAnimationLoader",
+                    lips_action =  next(
+                        iter(
+                            load_subset(
+                                project_name,
+                                lips_anim_repre,
+                                "LinkAnimationLoader",
+                            )[1]
+                        ),
+                        None,
                     )
 
                     character_rig = None
-                    for datablock in container.datablock_refs:
+                    for datablock in (
+                        d_ref.datablock for d_ref in container.datablock_refs
+                    ):
                         if isinstance(datablock, bpy.types.Collection):
                             character_rig = next(
                                 (
                                     children
-                                    for children in datablock.children_recursive
+                                    for children in datablock.all_objects
                                     if children.type == "ARMATURE"
                                 ),
                                 None,
@@ -504,8 +511,16 @@ def build_layout(project_name, asset_name):
                             break
 
                     if character_rig:
-                        character_rig.animation_data.nla_tracks.active.strips.new(
-                            "Lipsync", lips_action.frame_start, lips_action
+                        anim_data = character_rig.animation_data
+                        anim_data.use_nla = True
+                        nla_tracks = anim_data.nla_tracks
+                        nla_track = (
+                            nla_tracks.active
+                            if nla_tracks.active
+                            else nla_tracks.new()
+                        )
+                        nla_track.strips.new(
+                            lips_action.name, int(lips_action.frame_start), lips_action
                         )
 
             for root in container.get_root_datablocks(bpy.types.Collection):
