@@ -469,7 +469,7 @@ def build_layout(project_name, asset_name):
         # NOTE load_casting runs wait_for_download
 
         # NOTE cannot rely on containers from load_casting, memory is shuffled
-        containers = bpy.context.scene.openpype_containers
+        containers = bpy.context.window_manager.openpype_containers
 
         # Link loaded containers to layout collection
         for container in containers:
@@ -638,7 +638,7 @@ def build_anim(project_name, asset_name):
     # Switch hero containers to versioned
     errors = []
     setdress_container = None
-    for container in bpy.context.scene.openpype_containers:
+    for container in bpy.context.window_manager.openpype_containers:
         container_metadata = container["avalon"]
         family = container_metadata.get("family")
 
@@ -785,7 +785,7 @@ def build_anim(project_name, asset_name):
             )
 
     instances_to_create = {}
-    for container in bpy.context.scene.openpype_containers:
+    for container in bpy.context.window_manager.openpype_containers:
         container_metadata = container["avalon"]
         variant_name = container_metadata.get("asset_name")
         family = container_metadata.get("family")
