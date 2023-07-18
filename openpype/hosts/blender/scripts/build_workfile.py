@@ -473,8 +473,15 @@ def build_layout(project_name, asset_name):
 
         # Link loaded containers to layout collection
         for container in containers:
+            for root in container.get_root_datablocks(bpy.types.Collection):
+                if root not in layout_collection.children.values():
+                    layout_collection.children.link(root)
+                if root in bpy.context.scene.collection.children.values():
+                    bpy.context.scene.collection.children.unlink(root)
+
             container_metadata = container.get("avalon", {})
             if container_metadata.get("family") == "rig":
+                # Download lips animation
                 lips_anim_repre = download_subset(
                     project_name,
                     asset_name,
@@ -484,6 +491,8 @@ def build_layout(project_name, asset_name):
                 lips_action = None
                 if lips_anim_repre:
                     wait_for_download(project_name, [lips_anim_repre])
+
+                    # Get lips action
                     lips_action =  next(
                         iter(
                             load_subset(
@@ -495,39 +504,48 @@ def build_layout(project_name, asset_name):
                         None,
                     )
 
+                    # Get character rig
                     character_rig = None
-                    for datablock in (
-                        d_ref.datablock for d_ref in container.datablock_refs
+                    for datablock in container.get_datablocks(
+                        bpy.types.Collection
                     ):
-                        if isinstance(datablock, bpy.types.Collection):
-                            character_rig = next(
-                                (
-                                    children
-                                    for children in datablock.all_objects
-                                    if children.type == "ARMATURE"
-                                ),
-                                None,
-                            )
+                        character_rig = next(
+                            (
+                                obj
+                                for obj in datablock.all_objects
+                                if obj.type == "ARMATURE"
+                            ),
+                            None,
+                        )
+                        if character_rig:
                             break
 
                     if character_rig:
+                        # Get animation data
                         anim_data = character_rig.animation_data
                         anim_data.use_nla = True
+
+                        # Get nla tracks
                         nla_tracks = anim_data.nla_tracks
+
+                        # Get nla track
                         nla_track = (
                             nla_tracks.active
                             if nla_tracks.active
                             else nla_tracks.new()
                         )
-                        nla_track.strips.new(
-                            lips_action.name, int(lips_action.frame_start), lips_action
+
+                        # Set nla track name
+                        nla_track.name = (
+                            f"Lipsync_{container_metadata.get('asset_name')}"
                         )
 
-            for root in container.get_root_datablocks(bpy.types.Collection):
-                if root not in layout_collection.children.values():
-                    layout_collection.children.link(root)
-                if root in bpy.context.scene.collection.children.values():
-                    bpy.context.scene.collection.children.unlink(root)
+                        # Add nla strip
+                        nla_track.strips.new(
+                            lips_action.name,
+                            bpy.context.scene.frame_start,
+                            lips_action,
+                        )
 
         # Create GDEFORMER collection
         create_gdeformer_collection(bpy.context.scene.collection)
