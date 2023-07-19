@@ -529,11 +529,7 @@ def build_layout(project_name, asset_name):
                         nla_tracks = anim_data.nla_tracks
 
                         # Get nla track
-                        nla_track = (
-                            nla_tracks.active
-                            if nla_tracks.active
-                            else nla_tracks.new()
-                        )
+                        nla_track = nla_tracks.active or nla_tracks.new()
 
                         # Set nla track name
                         nla_track.name = (
