@@ -479,6 +479,7 @@ def build_layout(project_name, asset_name):
                 if root in bpy.context.scene.collection.children.values():
                     bpy.context.scene.collection.children.unlink(root)
 
+            # Apply lips animation if available
             container_metadata = container.get("avalon", {})
             if container_metadata.get("family") == "rig":
                 # Download lips animation
