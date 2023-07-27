@@ -150,7 +150,7 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
         # Get workfile version
         workfile_representation = sorted(
             filtered_repres, key=lambda r: r["context"]["version"]
-        )[version_index]
+        )[version_index] if len(workfile_representations) > 1 else workfile_representations[0]
 
         # Copy file and substitute path
         last_published_workfile_path = download_last_published_workfile(

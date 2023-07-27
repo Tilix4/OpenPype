@@ -12,6 +12,7 @@ class ValidateWorkfileUpToDate(pyblish.api.Validator):
     families = ["workfile"]
     label = "Validate Workfile Up To Date"
     optional = True
+    active = False
 
     def process(self):
         if (
