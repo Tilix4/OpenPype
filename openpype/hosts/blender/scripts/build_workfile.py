@@ -446,10 +446,10 @@ def build_layout(project_name, asset_name):
     """
     # Download not casting subsets
     board_repre = download_subset(
-        project_name, asset_name, "BoardReference", "mov"
+        project_name, asset_name, "BoardReference", "mov", hero=True
     )
     audio_repre = download_subset(
-        project_name, asset_name, "AudioReference", "wav"
+        project_name, asset_name, "AudioReference", "wav", hero=True
     )
 
     # Create layout instance
@@ -606,10 +606,10 @@ def build_anim(project_name, asset_name):
     )
     layout_repre = download_subset(project_name, asset_name, "layoutMain")
     board_repre = download_subset(
-        project_name, asset_name, "BoardReference", "mov"
+        project_name, asset_name, "BoardReference", "mov", hero=True
     )
     audio_repre = download_subset(
-        project_name, asset_name, "AudioReference", "wav"
+        project_name, asset_name, "AudioReference", "wav", hero=True
     )
     camera_repre = download_subset(project_name, asset_name, "cameraMain")
     wait_for_download(
