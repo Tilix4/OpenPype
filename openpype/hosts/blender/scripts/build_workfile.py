@@ -654,6 +654,7 @@ def build_anim(project_name, asset_name):
                 project_name,
                 asset_name,
                 f"animation{container_metadata.get('asset_name')}_lipsync",
+                hero=True,
             )
 
             if lip_anim_repre:
