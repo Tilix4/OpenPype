@@ -60,14 +60,12 @@ from openpype.modules.sync_server.sync_server import (
 )
 from openpype.modules.base import ModulesManager
 from .lib import download_last_workfile
-from .workio import OpenFileCacher
 from . import pipeline
 from openpype.tools.utils.lib import qt_app_context
 from .workio import (
     OpenFileCacher,
     check_workfile_up_to_date,
 )
-from .lib import download_last_workfile
 
 PREVIEW_COLLECTIONS: Dict = dict()
 
