@@ -61,7 +61,6 @@ from openpype.modules.sync_server.sync_server import (
 from openpype.modules.base import ModulesManager
 from .lib import download_last_workfile
 from . import pipeline
-from openpype.tools.utils.lib import qt_app_context
 from .workio import (
     OpenFileCacher,
     check_workfile_up_to_date,
@@ -1142,6 +1141,7 @@ class BuildWorkFile(bpy.types.Operator):
 
     def invoke(self, context, event):
         return bpy.context.window_manager.invoke_props_dialog(self, width=150)
+
 
 class WM_OT_CheckWorkfileUpToDate(bpy.types.Operator):
     """Check if the current workfile is up to date.
