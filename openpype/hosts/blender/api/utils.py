@@ -5,12 +5,14 @@ from typing import Dict, List, Optional, Set, Union, Iterator
 from collections.abc import Iterable
 
 import bpy
+from openpype.client.entities import get_representations
 from openpype.pipeline.constants import AVALON_CONTAINER_ID, AVALON_INSTANCE_ID
+from openpype.pipeline.context_tools import get_current_project_name
 from openpype.pipeline.load.plugins import (
     LoaderPlugin,
     discover_loader_plugins,
 )
-from openpype.pipeline.load.utils import loaders_from_representation
+from openpype.pipeline.load.utils import loaders_from_repre_context
 
 
 # Key for metadata dict
@@ -276,6 +278,22 @@ def assign_loader_to_datablocks(
     all_loaders = discover_loader_plugins()
     all_instanced_collections = get_instanced_collections()
     containers_loaders = {}
+
+    # Get all representations in scene in one DB call
+    project_name = get_current_project_name()
+    representations = {
+        str(repre_doc["_id"]): repre_doc
+        for repre_doc in get_representations(
+            project_name,
+            representation_ids={
+                d[AVALON_PROPERTY]["representation"]
+                for d in datablocks
+                if d.get(AVALON_PROPERTY)
+            },
+        )
+    }
+
+    # Assign loaders to containers
     for datablock in datablocks:
         if datablock in datablocks_to_skip:
             continue
@@ -295,10 +313,21 @@ def assign_loader_to_datablocks(
         if hasattr(datablock, "all_objects"):
             datablocks_to_skip.update(datablock.all_objects)
 
+        # Build fake representation context
+        fake_repre_context = {
+            "project": {
+                "name": project_name,
+            },
+            "subset": {
+                "data": {"family": avalon_data["family"]},
+                "schema": "openpype:subset-3.0",
+            },
+            "representation": representations.get(
+                avalon_data["representation"]
+            ),
+        }
         # Get available loaders
-        loaders = loaders_from_representation(
-            all_loaders, avalon_data.get("representation")
-        )
+        loaders = loaders_from_repre_context(all_loaders, fake_repre_context)
         if datablock.library or datablock.override_library:
             # Instance loader, an instance in OP is necessarily a link
             loader_type = (
@@ -511,6 +540,7 @@ def get_used_datablocks(
         ).items()
         if users & user_datablocks
     }
+
 
 def apply_settings(entity: bpy.types.ID, settings: dict):
     """Apply settings for given entity.
