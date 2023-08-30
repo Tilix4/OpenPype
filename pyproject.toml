@@ -162,6 +162,14 @@ hash = "3894dec7e4e521463891a869586850e8605f5fd604858b674c87323bf33e273d"
 url = "https://distribute.openpype.io/thirdparty/OpenColorIO-Configs-1.0.2.zip"
 hash = "4ac17c1f7de83465e6f51dd352d7117e07e765b66d00443257916c828e35b6ce"
 
+[openpype.opencue.pycue]
+url = "https://github.com/AcademySoftwareFoundation/OpenCue/releases/download/v0.22.14/pycue-0.22.14-all.tar.gz"
+hash = "01d4f212c8915e564070a8e4aefe6b8663ba454d6d4911bc9c0164d19aa02d39"
+
+[openpype.opencue.pyoutline]
+url = "https://github.com/AcademySoftwareFoundation/OpenCue/releases/download/v0.22.14/pyoutline-0.22.14-all.tar.gz"
+hash = "661dcf0f3188187a593bdf3752c4a8050f4f09ce77139725b4dac708e46e5d16"
+
 [tool.pyright]
 include = [
     "igniter",

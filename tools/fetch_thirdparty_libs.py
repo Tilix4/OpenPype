@@ -226,6 +226,97 @@ def install_thirdparty(pyproject, openpype_root, platform_name):
                 tar_file.close()
             _print("Extraction OK", 3)
 
+def install_opencue(pyproject, openpype_root):
+    try:
+        opencue_def = pyproject["openpype"]["opencue"]
+    except AttributeError:
+        _print("No third-party libraries specified in pyproject.toml", 1)
+        sys.exit(1)
+
+    url = opencue_def.get("url")
+    parsed_url = urlparse(url)
+    vendor_python_path = Path(openpype_root, "vendor", "python")
+    destination_path = vendor_python_path / "opencue"
+
+    for k, v in opencue_def.items():
+        _print(f"processing {k}")
+        destination_path = openpype_root / "vendor" / "python" / k
+
+        url = v.get("url")
+        parsed_url = urlparse(url)
+
+        # check if file is already extracted in /vendor/bin
+        if destination_path.exists():
+            _print("destination path already exists, deleting ...", 2)
+            if destination_path.is_dir():
+                try:
+                    shutil.rmtree(destination_path)
+                except OSError as e:
+                    _print("cannot delete folder.", 1)
+                    raise SystemExit(e)
+
+        # download file
+        _print(f"Downloading {url} ...")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_file = Path(temp_dir) / Path(parsed_url.path).name
+
+            r = requests.get(url, stream=True)
+            content_len = int(r.headers.get('Content-Length', '0')) or None
+            with manager.counter(
+                color='green',
+                total=content_len and math.ceil(content_len / 2 ** 20),
+                unit='MiB',
+                leave=False
+            ) as counter:
+                with open(temp_file, 'wb', buffering=2 ** 24) as file_handle:
+                    for chunk in r.iter_content(chunk_size=2 ** 20):
+                        file_handle.write(chunk)
+                        counter.update()
+
+            if not destination_path.exists():
+                destination_path.mkdir(parents=True)
+
+            # extract to destination
+            archive_type = temp_file.suffix.lstrip(".")
+            _print(f"Extracting {archive_type} file to {destination_path}")
+            try:
+                tar_file = tarfile.open(temp_file, 'r:gz')
+            except tarfile.ReadError:
+                raise SystemExit("corrupted archive")
+            for m in tar_file.getmembers():
+                m.name = Path(*Path(m.name).parts[1:]).as_posix()
+            tar_file.extractall(destination_path)
+            tar_file.close()
+            _print("Extraction OK", 3)
+
+        # Install requirements
+        _print("Installing requirements ...")
+        
+        try:
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m", "pip", "install", "--upgrade", "-r", str(destination_path / "requirements.txt"),
+                    "-t", str(vendor_python_path)
+                ],
+                check=True,
+                stdout=subprocess.DEVNULL
+            )
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(destination_path / "setup.py"), "install",
+                ],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                cwd=str(destination_path)
+            )
+
+        except subprocess.CalledProcessError as e:
+            _print("Error during OpenCue installation.", 1)
+            _print(str(e), 1)
+            sys.exit(1)
+
 
 def main():
     start_time = time.time_ns()
@@ -235,6 +326,7 @@ def main():
     install_qtbinding(pyproject, openpype_root, platform_name)
     install_runtime_dependencies(pyproject, openpype_root)
     install_thirdparty(pyproject, openpype_root, platform_name)
+    install_opencue(pyproject, openpype_root)
     end_time = time.time_ns()
     total_time = (end_time - start_time) / 1000000000
     _print(f"Downloading and extracting took {total_time} secs.")
