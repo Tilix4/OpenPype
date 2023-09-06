@@ -928,7 +928,7 @@ def build_fabrication(project_name: str, asset_name: str):
     if light_repre:
         # Load representation
         load_subset(project_name, light_repre, "AppendBlenderLightingLoader")
-    
+
     # Create setdress instance
     bpy.ops.scene.create_openpype_instance(
         creator_name="CreateWoollySetdress",
