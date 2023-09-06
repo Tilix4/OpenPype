@@ -1,4 +1,3 @@
-from itertools import chain
 import os
 from time import sleep, time
 from typing import List, Set, Tuple
@@ -35,10 +34,7 @@ from openpype.pipeline import (
     loaders_from_representation,
 )
 from openpype.pipeline.create import get_legacy_creator_by_name
-from openpype.pipeline.load.utils import (
-    get_representation_path,
-    switch_container,
-)
+from openpype.pipeline.load.utils import switch_container
 
 
 def get_loader(project_name: str, representation: dict, loader_type: str):
@@ -317,19 +313,11 @@ def load_casting(project_name: str, shot_name: str) -> Set[OpenpypeContainer]:
     all_datablocks = set()
     for representation in representations:
         try:
-            # If Environment, load Append
-            if "Environment" in representation["context"]["hierarchy"]:
-                container, datablocks = load_subset(
-                    project_name,
-                    representation,
-                    "Append",
-                )
-            else:
-                container, datablocks = load_subset(
-                    project_name,
-                    representation,
-                    "Link",
-                )
+            container, datablocks = load_subset(
+                project_name,
+                representation,
+                "Link",
+            )
             containers.append(container)
             all_datablocks.update(datablocks)
         except TypeError:
@@ -654,46 +642,13 @@ def build_anim(project_name, asset_name):
         container_metadata = container["avalon"]
         family = container_metadata.get("family")
 
-        if family == "setdress":
+        if family not in {"rig", "model", "setdress"}:
+            continue
+
+        # hold SetDress container
+        is_setdress = family == "setdress"
+        if is_setdress and not setdress_container:
             setdress_container = container
-
-            # Load World from setdress blend file
-            setdress_libpath = get_representation_path(
-                get_representation_by_id(
-                    project_name, container_metadata["representation"]
-                )
-            )
-            with bpy.data.libraries.load(setdress_libpath, link=True) as (
-                data_from,
-                data_to,
-            ):
-                data_to.worlds = data_from.worlds
-
-            # Set world to scene
-            if setdress_world := data_to.worlds[-1]:
-                bpy.context.scene.world = setdress_world
-            else:
-                errors.append("World from SetDress not found!")
-
-            # Make collection and children local
-            setdress_root_collection = next(
-                iter(setdress_container.get_root_outliner_datablocks())
-            )
-            if setdress_root_collection.override_library:
-                setdress_root_collection = (
-                    setdress_root_collection.make_local()
-                )
-                for datablock in chain.from_iterable(
-                    (
-                        setdress_root_collection.children_recursive,
-                        setdress_root_collection.all_objects,
-                    )
-                ):
-                    datablock.make_local()
-
-            continue
-        elif family not in {"rig", "model"}:
-            continue
 
         # Get version representation
         current_version = get_version_by_id(
@@ -714,17 +669,18 @@ def build_anim(project_name, asset_name):
                 current_representation["parent"],
                 fields=["_id", "parent", "type"],
             )
-        # current_version is None again, skip this container.
-        if not current_version:
-            continue
+            # current_version is None again, skip this container.
+            if not current_version:
+                continue
 
         version_id = current_version["_id"] if family == "setdress" else None
 
         # if current version representation is hero get last version
         if current_version["type"] == "hero_version":
-            if last_version := get_last_version_by_subset_id(
+            last_version = get_last_version_by_subset_id(
                 project_name, current_version["parent"], fields=["_id"]
-            ):
+            )
+            if last_version:
                 version_id = last_version["_id"]
 
         if not version_id:
@@ -735,7 +691,11 @@ def build_anim(project_name, asset_name):
         )
 
         # get loader
-        loader_name = container_metadata.get("loader")
+        if is_setdress:
+            loader_name = "LinkWoollySetdressLoader"
+        else:
+            loader_name = container_metadata.get("loader")
+
         if not loader_name or not isinstance(loader_name, str):
             continue
 
@@ -743,6 +703,7 @@ def build_anim(project_name, asset_name):
         if (
             current_version["_id"] != version_id
             or container_metadata.get("loader") != loader_name
+            or is_setdress  # force reload to relink world datablock
         ):
             try:
                 switch_container(
@@ -766,6 +727,21 @@ def build_anim(project_name, asset_name):
         gdeform_collection.name += ".old"
         bpy.data.collections.remove(gdeform_collection)
     create_gdeformer_collection(bpy.context.scene.collection)
+
+    # Get world from setdress
+    setdress_world = None
+    if setdress_container:
+        for world in setdress_container.get_datablocks(
+            bpy.types.World,
+            only_local=False,
+        ):
+            setdress_world = world
+
+    # Assign setdress or last loaded world
+    if setdress_world:
+        bpy.context.scene.world = setdress_world
+    else:
+        errors.append("World from SetDress not found!")
 
     # Load camera
     try:
@@ -817,11 +793,11 @@ def build_anim(project_name, asset_name):
 
         if family == "setdress":
             # For setdress container we gather only the root collection.
-            instances_to_create[variant_name] = [
+            instances_to_create[variant_name] = list(
                 d
                 for d in container.get_root_outliner_datablocks()
                 if isinstance(d, bpy.types.Collection)
-            ]
+            )
         else:
             # Get rigs
             armature_objects = {
@@ -1044,7 +1020,6 @@ def build_fabrication(project_name: str, asset_name: str):
         "render_preset"
     )
     apply_settings(bpy.context.scene, render_settings)
-
 
 def build_render(project_name, asset_name):
     """Build render workfile.
