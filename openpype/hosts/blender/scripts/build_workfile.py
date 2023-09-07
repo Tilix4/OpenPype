@@ -1094,10 +1094,6 @@ def build_workfile():
     else:
         return False
 
-    # Auto save
-    if bpy.data.filepath:
-        bpy.ops.wm.save_mainfile()
-
     return True
 
 
