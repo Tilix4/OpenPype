@@ -1082,8 +1082,7 @@ class BuildWorkFile(bpy.types.Operator):
                 # Getting file name anatomy
                 file_path = (
                     bpy.data.filepath
-                    if bpy.data.filepath
-                    else Anatomy(project_name).format(data)["work"]["file"]
+                    or Anatomy(project_name).format(data)["work"]["file"]
                 )
 
                 # Saving
