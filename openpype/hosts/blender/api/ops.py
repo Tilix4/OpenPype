@@ -1080,8 +1080,11 @@ class BuildWorkFile(bpy.types.Operator):
                 data.update({"version": 0, "ext": "blend"})
 
                 # Getting file name anatomy
-                anatomy_filled = Anatomy(project_name).format(data)
-                file_path = anatomy_filled["work"]["file"]
+                file_path = (
+                    bpy.data.filepath
+                    if bpy.data.filepath
+                    else Anatomy(project_name).format(data)["work"]["file"]
+                )
 
                 # Saving
                 if file_path:
