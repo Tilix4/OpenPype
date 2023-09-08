@@ -1081,19 +1081,23 @@ class BuildWorkFile(bpy.types.Operator):
                 data = get_template_data_with_names(
                     project_name, asset_name, task_name, host_name
                 )
-                data.update({
-                    "version": get_last_workfile_with_version(
-                        root,
-                        Anatomy(project_name).templates[
-                            get_workfile_template_key(
-                                task_name, host_name, project_name,
-                            )
-                        ]["file"],
-                        data,
-                        ["blend"],
-                    )[1],
-                    "ext": "blend",
-                })
+                data.update(
+                    {
+                        "version": get_last_workfile_with_version(
+                            root,
+                            Anatomy(project_name).templates[
+                                get_workfile_template_key(
+                                    task_name,
+                                    host_name,
+                                    project_name,
+                                )
+                            ]["file"],
+                            data,
+                            ["blend"],
+                        )[1],
+                        "ext": "blend",
+                    }
+                )
 
                 # Getting file name anatomy
                 file_path = (
