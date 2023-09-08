@@ -40,6 +40,10 @@ from openpype.pipeline.create.creator_plugins import (
 )
 from openpype.pipeline.create.subset_name import get_subset_name
 from openpype.pipeline.template_data import get_template_data_with_names
+from openpype.pipeline.workfile import (
+    get_last_workfile_with_version,
+    get_workfile_template_key,
+)
 from openpype.lib.path_tools import version_up
 from openpype.tools.utils import host_tools
 from openpype.hosts.blender.scripts import build_workfile
@@ -1077,7 +1081,19 @@ class BuildWorkFile(bpy.types.Operator):
                 data = get_template_data_with_names(
                     project_name, asset_name, task_name, host_name
                 )
-                data.update({"version": 0, "ext": "blend"})
+                data.update({
+                    "version": get_last_workfile_with_version(
+                        root,
+                        Anatomy(project_name).templates[
+                            get_workfile_template_key(
+                                task_name, host_name, project_name,
+                            )
+                        ]["file"],
+                        data,
+                        ["blend"],
+                    )[1],
+                    "ext": "blend",
+                })
 
                 # Getting file name anatomy
                 file_path = (
