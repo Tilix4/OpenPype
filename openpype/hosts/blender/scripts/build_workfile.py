@@ -639,11 +639,34 @@ def build_anim(project_name, asset_name):
     errors = []
     setdress_container = None
     for container in bpy.context.window_manager.openpype_containers:
-        container_metadata = container["avalon"]
+        container_metadata = container.get("avalon", {})
+        if not container_metadata:
+            continue
+
         family = container_metadata.get("family")
 
         if family not in {"rig", "model", "setdress"}:
             continue
+
+        if family == "rig":
+            # Download lip animation
+            lip_anim_repre = download_subset(
+                project_name,
+                asset_name,
+                f"animation{container_metadata.get('asset_name')}_lipsync",
+                hero=True,
+            )
+
+            if lip_anim_repre:
+                # Wait for lip animation download
+                wait_for_download(project_name, [lip_anim_repre])
+
+                # Load lips animation
+                load_subset(
+                    project_name,
+                    lip_anim_repre,
+                    "LinkAnimationLoader",
+                )
 
         # hold SetDress container
         is_setdress = family == "setdress"
