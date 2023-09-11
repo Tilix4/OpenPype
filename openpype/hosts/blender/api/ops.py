@@ -1070,7 +1070,9 @@ class BuildWorkFile(bpy.types.Operator):
 
             with qt_app_context():
                 session = legacy_io.Session
-                root = work_root(session)
+                root = Path(work_root(session))
+                if not root.is_dir():
+                    root.mkdir()
 
                 # Set work file data for template formatting
                 project_name = session["AVALON_PROJECT"]
@@ -1084,7 +1086,7 @@ class BuildWorkFile(bpy.types.Operator):
                 data.update(
                     {
                         "version": get_last_workfile_with_version(
-                            root,
+                            root.as_posix(),
                             Anatomy(project_name).templates[
                                 get_workfile_template_key(
                                     task_name,
@@ -1094,7 +1096,8 @@ class BuildWorkFile(bpy.types.Operator):
                             ]["file"],
                             data,
                             ["blend"],
-                        )[1],
+                        )[1]
+                        or 0,
                         "ext": "blend",
                     }
                 )
@@ -1107,7 +1110,7 @@ class BuildWorkFile(bpy.types.Operator):
 
                 # Saving
                 if file_path:
-                    file_path = version_up(os.path.join(root, file_path))
+                    file_path = version_up(root.joinpath(file_path).as_posix())
                     save_file(file_path, copy=False)
                 else:
                     print("Failed to save")
