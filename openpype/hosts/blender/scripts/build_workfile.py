@@ -851,20 +851,6 @@ def build_anim(project_name, asset_name):
         animation_instance = bpy.context.scene.openpype_instances[-1]
         add_datablocks_to_container(objects[1:], animation_instance)
 
-        # Enabled instance for publishing if any member objects are animated.
-        publish_enabled = False
-        for obj in objects:
-            if (
-                isinstance(obj, bpy.types.Object)
-                and obj.animation_data
-                and obj.animation_data.action
-            ):
-                publish_enabled = True
-                break
-            elif isinstance(obj, bpy.types.Collection):
-                objects.extend(obj.all_objects)
-        animation_instance.publish = publish_enabled
-
     # load the audio reference as sound into sequencer
     if audio_repre:
         load_subset(project_name, audio_repre, "Audio")
@@ -1043,6 +1029,7 @@ def build_fabrication(project_name: str, asset_name: str):
         "render_preset"
     )
     apply_settings(bpy.context.scene, render_settings)
+
 
 def build_render(project_name, asset_name):
     """Build render workfile.
