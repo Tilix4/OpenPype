@@ -267,6 +267,7 @@ class IntegrateAsset(pyblish.api.InstancePlugin):
         # Prepare all representations
         prepared_representations = []
         for repre in filtered_repres:
+            print("toto", repre)
             # todo: reduce/simplify what is returned from this function
             prepared = self.prepare_representation(
                 repre,

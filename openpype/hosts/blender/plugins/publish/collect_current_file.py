@@ -2,7 +2,7 @@ import os
 import bpy
 
 import pyblish.api
-from openpype.pipeline import get_current_task_name, get_current_asset_name
+from openpype.pipeline import legacy_io
 from openpype.hosts.blender.api import workio
 
 
@@ -34,38 +34,27 @@ class CollectBlenderCurrentFile(pyblish.api.ContextPlugin):
             "Current file is empty. Save the file before continuing."
         )
 
-        folder, file = os.path.split(current_file)
-        filename, ext = os.path.splitext(file)
-
-        task = get_current_task_name()
-
-        data = {}
+        _, file = os.path.split(current_file)
+        filename, _ = os.path.splitext(file)
 
         # create instance
         instance = context.create_instance(name=filename)
-        task = get_current_task_name()
+        task = legacy_io.Session["AVALON_TASK"]
         subset = "workfile" + task.capitalize()
 
-        data.update({
-            "subset": subset,
-            "asset": get_current_asset_name(),
-            "label": subset,
-            "publish": True,
-            "family": "workfile",
-            "families": ["workfile"],
-            "setMembers": [current_file],
-            "frameStart": bpy.context.scene.frame_start,
-            "frameEnd": bpy.context.scene.frame_end,
-        })
-
-        data["representations"] = [{
-            "name": ext.lstrip("."),
-            "ext": ext.lstrip("."),
-            "files": file,
-            "stagingDir": folder,
-        }]
-
-        instance.data.update(data)
+        instance.data.update(
+            {
+                "subset": subset,
+                "asset": os.getenv("AVALON_ASSET", None),
+                "label": subset,
+                "publish": True,
+                "family": "workfile",
+                "families": ["workfile"],
+                "setMembers": [current_file],
+                "frameStart": bpy.context.scene.frame_start,
+                "frameEnd": bpy.context.scene.frame_end,
+            }
+        )
 
         self.log.info("Collected instance: {}".format(file))
         self.log.info("Scene path: {}".format(current_file))

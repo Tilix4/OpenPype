@@ -1,10 +1,6 @@
 """Create a pointcache asset."""
 
-import bpy
-
-from openpype.pipeline import get_current_task_name
-import openpype.hosts.blender.api.plugin
-from openpype.hosts.blender.api import lib
+from openpype.hosts.blender.api import plugin
 
 
 class CreatePointcache(plugin.Creator):
