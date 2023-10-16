@@ -636,8 +636,8 @@ def build_anim(project_name, asset_name):
     update_scene_containers()
 
     # Switch hero containers to versioned
-    errors = []
     setdress_container = None
+    containers_to_switch = []
     for container in bpy.context.window_manager.openpype_containers:
         container_metadata = container.get("avalon", {})
         if not container_metadata:
@@ -722,25 +722,54 @@ def build_anim(project_name, asset_name):
         if not loader_name or not isinstance(loader_name, str):
             continue
 
-        # Switch container to versioned
+        # Download versioned subset
         if (
             current_version["_id"] != version_id
             or container_metadata.get("loader") != loader_name
             or is_setdress  # force reload to relink world datablock
         ):
-            try:
-                switch_container(
-                    container_metadata,
-                    version_representation,
-                    get_loader(
-                        project_name,
-                        version_representation,
-                        loader_name,
-                    ),
-                )
-            except (RuntimeError, AssertionError) as err:
-                errors.append(f"Switch failed for {container.name}: {err}")
+            version_repre_context = version_representation.get("context")
+            if not version_repre_context:
                 continue
+
+            new_repre = download_subset(
+                project_name,
+                version_repre_context.get("asset"),
+                version_repre_context.get("subset")
+            )
+
+            # Add data to containers to switch list
+            containers_to_switch.append(
+                {
+                    "name": container.name,
+                    "metadata": container_metadata,
+                    "representation": new_repre,
+                    "loader": get_loader(
+                        project_name,
+                        new_repre,
+                        loader_name,
+                    )
+                }
+            )
+
+    # Wait for containers to switch to be downloaded
+    wait_for_download(
+        project_name, [c.get("representation") for c in containers_to_switch]
+    )
+
+    errors = []
+
+    # Switch hero containers to versioned
+    for container in containers_to_switch:
+        try:
+            switch_container(
+                container.get("metadata"),
+                container.get("representation"),
+                container.get("loader"),
+            )
+        except (RuntimeError, AssertionError) as err:
+            errors.append(f"Switch failed for {container.get('name')}: {err}")
+            continue
 
     # Substitute overridden GDEFORMER collection by local one
     scene_collections_by_name = {
