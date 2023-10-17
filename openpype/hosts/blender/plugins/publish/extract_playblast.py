@@ -26,6 +26,11 @@ class ExtractPlayblast(Extractor):
     def process(self, instance):
         self.log.info("Extracting capture..")
 
+        # Stop if errors to avoid useless render
+        for result in instance.context.data["results"]:
+            if not result["success"]:
+                return
+
         # get scene fps
         fps = instance.data.get("fps")
         if fps is None:
