@@ -29,7 +29,10 @@ class ExtractPlayblast(Extractor):
         # Stop if errors to avoid useless render
         for result in instance.context.data["results"]:
             if not result["success"]:
-                return
+                raise RuntimeError(
+                    "Stop extracting playblast, "
+                    "because of previous errors."
+                )
 
         # get scene fps
         fps = instance.data.get("fps")
