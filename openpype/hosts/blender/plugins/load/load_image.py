@@ -167,7 +167,7 @@ class BackgroundLoader(ImageLoader):
         if img.source == "MOVIE":
             bkg_img.image_user.frame_start = bpy.context.scene.frame_start
             bkg_img.image_user.frame_duration = (
-                bpy.context.scene.frame_end - bpy.context.scene.frame_start
+                bpy.context.scene.frame_end - bpy.context.scene.frame_start + 1
             )
             # Append audio in the sequencer only if there is no sound yet
             sequences = bpy.context.scene.sequence_editor.sequences
