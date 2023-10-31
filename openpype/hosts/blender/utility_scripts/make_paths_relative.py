@@ -41,4 +41,7 @@ if __name__ == "__main__":
     # Raise errors
     for e in errors:
         # Print syntax same as raising an exception
-        traceback.print_exception(*e, file=sys.stdout)
+        if len(e) < 5:
+            traceback.print_exception(*e, file=sys.stdout)
+        else:
+            traceback.print_exception(*e)
