@@ -8,22 +8,20 @@ import bpy
 from openpype.hosts.blender.api import plugin
 from openpype.hosts.blender.api.properties import OpenpypeContainer
 
-class FbxLoader(plugin.AssetLoader):
+class FbxLoader(plugin.Loader):
     """Import FBX.
 
     Stores the imported asset in a collection named after the asset.
     """
     representations = ["fbx"]
 
-    label = "Import FBX"
     icon = "download"
     color = "orange"
     order = 4
 
-    load_type = "FBX"
     scale_length = 0
 
-    def _load_fbx(
+    def _load_library_as_container(
         self,
         libpath: Path,
         container_name: str,
@@ -50,20 +48,13 @@ class FbxLoader(plugin.AssetLoader):
             container_name, objects, container=container
         )
 
-    def get_load_function(self) -> Callable:
-        """Get appropriate function regarding the load type of the loader.
-
-        Returns:
-            Callable: Load function
-        """
-        return self._load_fbx
-
 
 class FbxModelLoader(FbxLoader):
     """Import FBX models.
 
     Stores the imported asset in a collection named after the asset.
     """
+    label = "Import FBX"
     families = ["model", "rig"]
 
 

@@ -6,7 +6,7 @@ from openpype.hosts.blender.api import plugin
 from openpype.hosts.blender.api.utils import BL_TYPE_DATAPATH
 
 
-class WorkfileLoader(plugin.BlendLibraryLoader):
+class WorkfileLoader(plugin.BlendLoader):
     """Load Workfile from a .blend file."""
 
     bl_types = frozenset(BL_TYPE_DATAPATH.keys())  # All available types

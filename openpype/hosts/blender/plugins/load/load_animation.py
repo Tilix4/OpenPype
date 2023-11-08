@@ -5,7 +5,7 @@ import bpy
 from openpype.hosts.blender.api import plugin
 
 
-class AnimationLoader(plugin.BlendLibraryLoader):
+class AnimationLoader(plugin.BlendLoader):
     """Load animations from a .blend file."""
     families = ["animation"]
 

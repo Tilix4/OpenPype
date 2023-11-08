@@ -3,7 +3,7 @@
 from openpype.hosts.blender.api import plugin
 
 
-class LinkSetdressLoader(plugin.BlendLibraryLoader):
+class LinkSetdressLoader(plugin.BlendLoader):
     """Link setdress from a .blend file."""
 
     families = ["setdress"]
@@ -17,7 +17,11 @@ class LinkSetdressLoader(plugin.BlendLibraryLoader):
     load_type = "LINK"
 
 
+<<<<<<< Updated upstream
 class AppendSetdressLoader(plugin.BlendLibraryLoader):
+=======
+class AppendSetdressLoader(plugin.BlendLoader):
+>>>>>>> Stashed changes
     """Append setdress from a .blend file."""
 
     families = ["setdress"]

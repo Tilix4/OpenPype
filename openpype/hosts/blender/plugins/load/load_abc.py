@@ -8,26 +8,21 @@ from openpype.hosts.blender.api import plugin
 from openpype.hosts.blender.api.properties import OpenpypeContainer
 
 
-class CacheModelLoader(plugin.AssetLoader):
-    """Import cache models.
+class AbcLoader(plugin.Loader):
+    """Load Alembic.
 
-    Stores the imported asset in a collection named after the asset.
+    Store the imported asset in a collection named after the asset.
 
     Note:
         At least for now it only supports Alembic files.
     """
-
-    families = ["model", "pointcache"]
     representations = ["abc"]
 
-    label = "Import Alembic"
     icon = "download"
     color = "orange"
     order = 4
 
-    load_type = "ABC"
-
-    def _load_abc(
+    def _load_library_as_container(
         self,
         libpath: Path,
         container_name: str,
@@ -62,10 +57,14 @@ class CacheModelLoader(plugin.AssetLoader):
             container_name, objects, container=container
         )
 
-    def get_load_function(self) -> Callable:
-        """Get appropriate function regarding the load type of the loader.
+class AbcModelLoader(AbcLoader):
+    label = "Import Alembic model"
+    families = ["model"]
 
-        Returns:
-            Callable: Load function
-        """
-        return self._load_abc
+class AbcPointCacheLoader(AbcLoader):
+    label = "Import Alembic Cache"
+    families = ["pointcache"]
+
+class AbcCameraLoader(AbcLoader):
+    label = "Import Alembic camera"
+    families = ["camera"]

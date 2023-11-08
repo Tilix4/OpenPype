@@ -3,7 +3,7 @@
 from openpype.hosts.blender.api import plugin
 
 
-class LinkCameraLoader(plugin.BlendLibraryLoader):
+class LinkCameraLoader(plugin.BlendLoader):
     """Link a camera from a .blend file."""
 
     families = ["camera"]
