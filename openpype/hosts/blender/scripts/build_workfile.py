@@ -572,6 +572,7 @@ def build_layout(project_name, asset_name):
         subset_name="reviewMain",
         datapath="collections",
         datablock_name=camera_collection.name,
+        use_selection=False,
     )
 
     # Assign setdress or last loaded world
