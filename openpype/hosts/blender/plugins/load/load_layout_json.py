@@ -11,8 +11,9 @@ from openpype.pipeline import (
 from openpype.hosts.blender.api import plugin
 
 
-class JsonLayoutLoader(plugin.AssetLoader):
+class JsonLayoutLoader(plugin.Loader):
     """Load layout from a .json file."""
+    # TODO
 
     families = ["layout"]
     representations = ["json"]
@@ -23,18 +24,18 @@ class JsonLayoutLoader(plugin.AssetLoader):
     color_tag = "COLOR_02"
     order = 4
 
-    def _get_loader(self, loaders, family):
-        name = ""
-        if family == "rig":
-            name = "LinkRigLoader"
-        elif family == "model":
-            name = "LinkModelLoader"
-        else:
-            return None
+    # def _get_loader(self, loaders, family):
+    #     name = ""
+    #     if family == "rig":
+    #         name = "LinkRigLoader"
+    #     elif family == "model":
+    #         name = "LinkModelLoader"
+    #     else:
+    #         return None
 
-        for loader in loaders:
-            if loader.__name__ == name:
-                return loader
+    #     for loader in loaders:
+    #         if loader.__name__ == name:
+    #             return loader
 
     def _load_process(self, libpath, container_name):  # TODO
         plugin.deselect_all()
