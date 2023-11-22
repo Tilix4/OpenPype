@@ -26,12 +26,8 @@ class ExtractABC(publish.Extractor):
         plugin.deselect_all()
 
         selected = []
-        members = list(instance)
 
-        for obj in members:
-            if isinstance(obj, bpy.types.Collection):
-                members.extend(obj.children_recursive)
-                members.extend(obj.all_objects)
+        for obj in instance:
             if isinstance(obj, bpy.types.Object):
                 obj.select_set(True)
                 selected.append(obj)

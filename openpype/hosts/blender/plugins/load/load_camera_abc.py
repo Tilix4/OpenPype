@@ -17,13 +17,11 @@ from openpype.hosts.blender.api.pipeline import (
 )
 
 
-class AbcCameraLoader(plugin.Loader):
+class AbcCameraLoader(plugin.AssetLoader):
     """Load a camera from Alembic file.
 
     Stores the imported asset in an empty named after the asset.
     """
-
-    # TODO Merge with load_abc.py -> Test if it works with cameras
 
     families = ["camera"]
     representations = ["abc"]

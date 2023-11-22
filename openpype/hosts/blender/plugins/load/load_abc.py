@@ -1,51 +1,37 @@
 """Load an asset in Blender from an Alembic file."""
-from pathlib import Path
-from typing import Callable, List, Tuple
 
 import bpy
 
 from openpype.hosts.blender.api import plugin
-from openpype.hosts.blender.api.properties import OpenpypeContainer
 
 
-class AbcLoader(plugin.Loader):
-    """Load Alembic.
+class CacheModelLoader(plugin.AssetLoader):
+    """Import cache models.
 
-    Store the imported asset in a collection named after the asset.
+    Stores the imported asset in a collection named after the asset.
 
     Note:
         At least for now it only supports Alembic files.
     """
+
+    families = ["model", "pointcache"]
     representations = ["abc"]
 
+    label = "Import Alembic"
     icon = "download"
     color = "orange"
+    color_tag = "COLOR_04"
     order = 4
 
-    def _load_library_as_container(
-        self,
-        libpath: Path,
-        container_name: str,
-        container: OpenpypeContainer = None,
-    ) -> Tuple[OpenpypeContainer, List[bpy.types.ID]]:
-        """Load ABC process.
-
-        Args:
-            libpath (Path): Path of ABC file to load.
-            container_name (str): Name of container to link.
-            container (OpenpypeContainer): Load into existing container.
-                Defaults to None.
-
-        Returns:
-            Tuple[List[bpy.types.ID], OpenpypeContainer]:
-                (Created scene container, Loaded datablocks)
-        """
+    def _load_process(self, libpath, container_name):  # TODO
 
         current_objects = set(bpy.data.objects)
 
-        window = bpy.context.window_manager.windows[0]
-        with bpy.context.temp_override(window=window):
-            bpy.ops.wm.alembic_import(filepath=libpath.as_posix())
+        relative = bpy.context.preferences.filepaths.use_relative_paths
+        bpy.ops.wm.alembic_import(
+            filepath=libpath,
+            relative_path=relative
+        )
 
         objects = set(bpy.data.objects) - current_objects
 
@@ -53,18 +39,7 @@ class AbcLoader(plugin.Loader):
             for collection in obj.users_collection:
                 collection.objects.unlink(obj)
 
-        return self._containerize_objects_in_collection(
-            container_name, objects, container=container
-        )
+        plugin.link_to_collection(objects, asset_group)
 
-class AbcModelLoader(AbcLoader):
-    label = "Import Alembic model"
-    families = ["model"]
-
-class AbcPointCacheLoader(AbcLoader):
-    label = "Import Alembic Cache"
-    families = ["pointcache"]
-
-class AbcCameraLoader(AbcLoader):
-    label = "Import Alembic camera"
-    families = ["camera"]
+        plugin.orphans_purge()
+        plugin.deselect_all()
