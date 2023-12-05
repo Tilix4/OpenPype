@@ -156,18 +156,21 @@ def wait_for_download(project_name, representations: List[dict]):
 
     # Wait for download
     local_site_id = get_local_site_id()
-    start = time()  # 5 minutes timeout
-    while (
-        not all(
+    failed_downloads = []
+    for r in representations:
+        try:
             sync_server.is_representation_on_site(
-                project_name, r["_id"], local_site_id
+                project_name, r["_id"], local_site_id, max_retries=2
             )
-            for r in representations
-            if r
+        except ValueError:
+            failed_downloads.append(r)
+
+    if failed_downloads:
+        raise RuntimeError(
+            "Failed to download: "
+            f"""{"', '".join([r['name'] for r in failed_downloads])}. """
+            "Please check sync on remote site..."
         )
-        and time() - start < 300
-    ):
-        sleep(5)
 
 
 def load_subset(
@@ -735,7 +738,7 @@ def build_anim(project_name, asset_name):
             new_repre = download_subset(
                 project_name,
                 version_repre_context.get("asset"),
-                version_repre_context.get("subset")
+                version_repre_context.get("subset"),
             )
 
             # Add data to containers to switch list
@@ -748,7 +751,7 @@ def build_anim(project_name, asset_name):
                         project_name,
                         new_repre,
                         loader_name,
-                    )
+                    ),
                 }
             )
 
