@@ -156,7 +156,8 @@ def wait_for_download(project_name, representations: List[dict]):
 
     # Wait for download
     local_site_id = get_local_site_id()
-    start = time()  # 5 minutes timeout
+    failed_downloads = []
+    tries = 0
     while (
         not all(
             sync_server.is_representation_on_site(
@@ -165,9 +166,26 @@ def wait_for_download(project_name, representations: List[dict]):
             for r in representations
             if r
         )
-        and time() - start < 300
+        and tries < 2
     ):
-        sleep(5)
+        sleep(sync_server.get_loop_delay(project_name))
+        tries += 1
+
+    failed_downloads = [
+        r
+        for r in representations
+        if r
+        and not sync_server.is_representation_on_site(
+            project_name, r["_id"], local_site_id
+        )
+    ]
+
+    if failed_downloads:
+        raise RuntimeError(
+            "Failed to download: "
+            f"""{"', '".join([f'''{r['context']['asset']}_{r['context']['subset']}''' for r in failed_downloads])}. """
+            "Please check sync on remote site..."
+        )
 
 
 def load_subset(
@@ -547,6 +565,9 @@ def build_layout(project_name, asset_name):
                 ),
                 None,
             )
+
+            # Assign setdress or last loaded world
+            bpy.context.scene.world = setdress_world or bpy.data.worlds[-1]
     except RuntimeError as err:
         errors.append(f"Build setdress failed ! {err}")
         camera_collection = None
@@ -574,9 +595,6 @@ def build_layout(project_name, asset_name):
         datablock_name=camera_collection.name,
         use_selection=False,
     )
-
-    # Assign setdress or last loaded world
-    bpy.context.scene.world = setdress_world or bpy.data.worlds[-1]
 
     # Load Audio and Board
     errors.extend(
@@ -736,7 +754,7 @@ def build_anim(project_name, asset_name):
             new_repre = download_subset(
                 project_name,
                 version_repre_context.get("asset"),
-                version_repre_context.get("subset")
+                version_repre_context.get("subset"),
             )
 
             # Add data to containers to switch list
@@ -749,7 +767,7 @@ def build_anim(project_name, asset_name):
                         project_name,
                         new_repre,
                         loader_name,
-                    )
+                    ),
                 }
             )
 
