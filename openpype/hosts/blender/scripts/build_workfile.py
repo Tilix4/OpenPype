@@ -157,18 +157,33 @@ def wait_for_download(project_name, representations: List[dict]):
     # Wait for download
     local_site_id = get_local_site_id()
     failed_downloads = []
-    for r in representations:
-        try:
+    tries = 0
+    while (
+        not all(
             sync_server.is_representation_on_site(
-                project_name, r["_id"], local_site_id, max_retries=2
+                project_name, r["_id"], local_site_id
             )
-        except ValueError:
-            failed_downloads.append(r)
+            for r in representations
+            if r
+        )
+        and tries < 2
+    ):
+        sleep(sync_server.get_loop_delay(project_name))
+        tries += 1
+
+    failed_downloads = [
+        r
+        for r in representations
+        if r
+        and not sync_server.is_representation_on_site(
+            project_name, r["_id"], local_site_id
+        )
+    ]
 
     if failed_downloads:
         raise RuntimeError(
             "Failed to download: "
-            f"""{"', '".join([r['name'] for r in failed_downloads])}. """
+            f"""{"', '".join([f'''{r['context']['asset']}_{r['context']['subset']}''' for r in failed_downloads])}. """
             "Please check sync on remote site..."
         )
 
@@ -550,6 +565,9 @@ def build_layout(project_name, asset_name):
                 ),
                 None,
             )
+
+            # Assign setdress or last loaded world
+            bpy.context.scene.world = setdress_world or bpy.data.worlds[-1]
     except RuntimeError as err:
         errors.append(f"Build setdress failed ! {err}")
         camera_collection = None
@@ -576,9 +594,6 @@ def build_layout(project_name, asset_name):
         datapath="collections",
         datablock_name=camera_collection.name,
     )
-
-    # Assign setdress or last loaded world
-    bpy.context.scene.world = setdress_world or bpy.data.worlds[-1]
 
     # Load Audio and Board
     errors.extend(
