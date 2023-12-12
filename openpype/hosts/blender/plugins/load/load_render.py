@@ -3,7 +3,7 @@
 from openpype.hosts.blender.api import plugin
 
 
-class LinkRenderLoader(plugin.AssetLoader):
+class LinkRenderLoader(plugin.BlendLoader):
     """Link render scenes from a .blend file."""
 
     families = ["render"]
@@ -18,7 +18,7 @@ class LinkRenderLoader(plugin.AssetLoader):
     load_type = "LINK"
 
 
-class AppendRenderLoader(plugin.AssetLoader):
+class AppendRenderLoader(plugin.BlendLoader):
     """Append render scenes from a .blend file."""
 
     families = ["render"]
