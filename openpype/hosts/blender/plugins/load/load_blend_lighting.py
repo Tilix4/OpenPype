@@ -8,7 +8,7 @@ import bpy
 from openpype.hosts.blender.api import plugin
 from openpype.hosts.blender.api.utils import BL_OUTLINER_TYPES
 
-class LinkBlenderLightingLoader(plugin.AssetLoader):
+class LinkBlenderLightingLoader(plugin.BlendLoader):
     """Link lighting from a .blend file."""
 
     families = ["blender.lighting"]
