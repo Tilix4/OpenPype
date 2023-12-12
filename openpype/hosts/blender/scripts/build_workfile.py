@@ -23,7 +23,7 @@ from openpype.hosts.blender.api.lib import (
     update_scene_containers,
 )
 from openpype.settings.lib import get_project_settings
-from openpype.hosts.blender.api.utils import BL_TYPE_DATAPATH, apply_settings
+from openpype.hosts.blender.api.utils import BL_TYPE_DATACOL, apply_settings
 from openpype.lib.local_settings import get_local_site_id
 from openpype.modules import ModulesManager
 from openpype.pipeline import (
@@ -591,7 +591,7 @@ def build_layout(project_name, asset_name):
         creator_name="CreateReview",
         asset_name=asset_name,
         subset_name="reviewMain",
-        datapath="collections",
+        datacol="collections",
         datablock_name=camera_collection.name,
         use_selection=False,
     )
@@ -850,7 +850,7 @@ def build_anim(project_name, asset_name):
                 creator_name="CreateReview",
                 asset_name=asset_name,
                 subset_name="reviewMain",
-                datapath="collections",
+                datacol="collections",
                 datablock_name=camera_collection.name,
                 use_selection=False,
             )
@@ -892,7 +892,7 @@ def build_anim(project_name, asset_name):
             creator_name="CreateAnimation",
             asset_name=asset_name,
             subset_name=f"animation{variant_name}",
-            datapath=BL_TYPE_DATAPATH.get(type(objects[0])),
+            datacol=BL_TYPE_DATACOL.get(type(objects[0])),
             datablock_name=objects[0].name,
             use_selection=False,
         )
@@ -1017,7 +1017,7 @@ def build_fabrication(project_name: str, asset_name: str):
         creator_name="CreateReview",
         asset_name=asset_name,
         subset_name="reviewMain",
-        datapath="collections",
+        datacol="collections",
         datablock_name=camera_name,
     )
 
@@ -1044,7 +1044,7 @@ def build_fabrication(project_name: str, asset_name: str):
                 variant_name="Main",
                 variant_default="Main",
                 compatible_with_outliner=True,
-                datapath="worlds",
+                datacol="worlds",
                 datablock_name=world.name,
             )
 
