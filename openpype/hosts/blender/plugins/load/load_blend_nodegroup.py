@@ -6,7 +6,7 @@ from openpype.hosts.blender.api import plugin
 from openpype.hosts.blender.api.utils import NODETREE_TYPES
 
 
-class BlenderNodegroupLoader(plugin.AssetLoader):
+class BlenderNodegroupLoader(plugin.BlendLoader):
     """Load and assign extracted nodegroups from .blend file."""
 
     representations = ["blend"]
