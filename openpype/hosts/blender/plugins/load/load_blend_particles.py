@@ -5,7 +5,7 @@ import bpy
 from openpype.hosts.blender.api import plugin
 
 
-class BlenderParticlesLoader(plugin.AssetLoader):
+class BlenderParticlesLoader(plugin.BlendLoader):
     """Load and assign extracted particles from .blend file."""
 
     representations = ["blend"]
