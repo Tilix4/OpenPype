@@ -5,7 +5,7 @@ import bpy
 from openpype.hosts.blender.api import plugin
 
 
-class MaterialLookLoader(plugin.AssetLoader):
+class MaterialLookLoader(plugin.BlendLoader):
     """Load and assign extracted materials from .blend file."""
 
     label = "Load Materials"

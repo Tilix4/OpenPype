@@ -10,7 +10,7 @@ from openpype.hosts.blender.api.properties import OpenpypeContainer
 from openpype.hosts.blender.api.utils import AVALON_PROPERTY
 
 
-class ImageLoader(plugin.AssetLoader):
+class ImageLoader(plugin.BlendLoader):
     """Load image in Blender.
 
     Append an bpy.types.Image in data of the current blend file.
