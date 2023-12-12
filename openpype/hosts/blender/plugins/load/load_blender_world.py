@@ -4,7 +4,7 @@ import bpy
 
 from openpype.hosts.blender.api import plugin
 
-class LinkBlenderWorldLoader(plugin.AssetLoader):
+class LinkBlenderWorldLoader(plugin.BlendLoader):
     """Link worlds from a .blend file."""
 
     families = ["blender.world"]
@@ -20,7 +20,7 @@ class LinkBlenderWorldLoader(plugin.AssetLoader):
     bl_types = frozenset({bpy.types.World})
 
 
-class AppendBlenderWorldLoader(plugin.AssetLoader):
+class AppendBlenderWorldLoader(plugin.BlendLoader):
     """Append worlds from a .blend file."""
 
     families = ["blender.world"]
