@@ -28,7 +28,7 @@ class ImageLoader(plugin.BlendLoader):
 
     load_type = "LINK"  # TODO meaningless here, must be refactored
 
-    def _load_library_datablocks(
+    def _load_blend_datablocks_as_container(
         self,
         libpath: Path,
         container_name: str,
