@@ -185,7 +185,7 @@ def on_open():
     ):
         bpy.ops.wm.check_workfile_up_to_date("INVOKE_DEFAULT")
 
-    unit_scale_settings = settings.get("unit_scale_settings")
+    unit_scale_settings = settings.get("blender").get("unit_scale_settings")
     unit_scale_enabled = unit_scale_settings.get("enabled")
     apply_on_opening = unit_scale_settings.get("apply_on_opening")
     if unit_scale_enabled and apply_on_opening:
