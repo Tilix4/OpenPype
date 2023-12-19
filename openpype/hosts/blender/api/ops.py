@@ -20,7 +20,6 @@ import bpy.utils.previews
 
 from openpype import style
 from openpype.client.entities import (
-    get_last_version_by_subset_id,
     get_asset_by_name,
     get_assets,
 )
@@ -55,17 +54,8 @@ from openpype.tools.utils import host_tools
 from openpype.hosts.blender.scripts import build_workfile
 from openpype.tools.utils.lib import qt_app_context
 from .workio import OpenFileCacher, save_file, work_root
-from openpype.client.entities import (
-    match_subset_id,
-    get_representation_by_task,
-)
-from openpype.modules.sync_server.sync_server import (
-    get_last_published_workfile_path,
-    download_last_published_workfile,
-)
 from openpype.modules.base import ModulesManager
 from .lib import download_last_workfile, save_as_local_workfile
-from . import pipeline
 from .workio import (
     OpenFileCacher,
     check_workfile_up_to_date,
