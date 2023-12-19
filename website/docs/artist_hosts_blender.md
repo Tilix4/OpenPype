@@ -13,6 +13,7 @@ sidebar_label: Blender
 -   [Manage (Inventory)](artist_tools_inventory)
 -   [Publish](artist_tools_publisher)
 -   [Library Loader](artist_tools_library_loader)
+-   [Workfile Out Of Date Handling](artist_hosts_blender_workfile_out_of_date_handling)
 
 ## Working with OpenPype in Blender
 

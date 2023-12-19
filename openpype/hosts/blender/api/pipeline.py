@@ -1,7 +1,7 @@
 import os
 import sys
 import traceback
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Iterator, List, Optional
 
 import bpy
 from openpype.hosts.blender.api import utils
@@ -11,8 +11,13 @@ from . import ops, properties, ui
 
 import pyblish.api
 
+from openpype.lib.dateutils import get_timestamp
 from openpype.client import get_asset_by_name
 from openpype.settings import get_project_settings
+from openpype.client.entities import (
+    get_last_version_by_subset_name,
+    get_asset_by_name,
+)
 from openpype.pipeline import (
     legacy_io,
     register_loader_plugin_path,
@@ -28,7 +33,6 @@ from openpype.lib import (
 )
 import openpype.hosts.blender
 from openpype.settings import get_project_settings
-
 
 HOST_DIR = os.path.dirname(os.path.abspath(openpype.hosts.blender.__file__))
 PLUGINS_DIR = os.path.join(HOST_DIR, "plugins")
@@ -158,6 +162,10 @@ def on_new():
     project = os.environ.get("AVALON_PROJECT")
     settings = get_project_settings(project)
 
+    bpy.types.Scene.is_workfile_up_to_date = bpy.props.BoolProperty(
+        name="Is Workfile Up To Date",
+    )
+
     unit_scale_settings = settings.get("blender").get("unit_scale_settings")
     unit_scale_enabled = unit_scale_settings.get("enabled")
     if unit_scale_enabled:
@@ -171,6 +179,11 @@ def on_open():
 
     project = os.environ.get("AVALON_PROJECT")
     settings = get_project_settings(project)
+
+    if hasattr(
+        bpy.types, bpy.ops.wm.check_workfile_up_to_date.idname()
+    ):
+        bpy.ops.wm.check_workfile_up_to_date("INVOKE_DEFAULT")
 
     unit_scale_settings = settings.get("blender").get("unit_scale_settings")
     unit_scale_enabled = unit_scale_settings.get("enabled")
@@ -255,6 +268,44 @@ def _register_events():
     register_event_callback("taskChanged", _on_task_changed)
     log.info("Installed event callback for 'taskChanged'...")
 
+
+def _discover_gui() -> Optional[Callable]:
+    """Return the most desirable of the currently registered GUIs"""
+
+    # Prefer last registered
+    guis = reversed(pyblish.api.registered_guis())
+
+    for gui in guis:
+        try:
+            gui = __import__(gui).show
+        except (ImportError, AttributeError):
+            continue
+        else:
+            return gui
+
+    return None
+
+
+def add_to_avalon_container(container: bpy.types.Collection):
+    """Add the container to the Avalon container."""
+
+    avalon_container = bpy.data.collections.get(AVALON_CONTAINERS)
+    if not avalon_container:
+        avalon_container = bpy.data.collections.new(name=AVALON_CONTAINERS)
+
+        # Link the container to the scene so it's easily visible to the artist
+        # and can be managed easily. Otherwise it's only found in "Blender
+        # File" view and it will be removed by Blenders garbage collection,
+        # unless you set a 'fake user'.
+        bpy.context.scene.collection.children.link(avalon_container)
+
+    avalon_container.children.link(container)
+
+    # Disable Avalon containers for the view layers.
+    for view_layer in bpy.context.scene.view_layers:
+        for child in view_layer.layer_collection.children:
+            if child.collection == avalon_container:
+                child.exclude = True
 
 
 def metadata_update(node: bpy.types.bpy_struct_meta_idprop, data: Dict):
