@@ -773,6 +773,11 @@ def replace_datablocks(
             if new_datablock.library:
                 continue
 
+            # Transfer hide
+            if hasattr(old_datablock, "hide_viewport"):
+                new_datablock.hide_viewport = old_datablock.hide_viewport
+                new_datablock.hide_render = old_datablock.hide_render
+
             # Transfer transforms
             if isinstance(old_datablock, bpy.types.Object):
                 new_datablock.location = old_datablock.location
