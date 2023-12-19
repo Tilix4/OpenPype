@@ -9,11 +9,13 @@ from openpype.pipeline import (
     get_current_project_name,
     get_current_asset_name,
     get_current_task_name,
+    legacy_io,
 )
 from openpype.client.entities import (
     get_last_version_by_subset_name,
     get_representations,
 )
+from openpype.settings.lib import get_project_settings
 
 
 class OpenFileCacher:
