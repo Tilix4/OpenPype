@@ -1,4 +1,5 @@
 """Load a layout in Blender."""
+from typing import Set
 import bpy
 
 from openpype.hosts.blender.api.properties import OpenpypeContainer
@@ -10,24 +11,23 @@ class LayoutLoader(plugin.BlendLoader):
 
     color = "orange"
 
-    def _make_local_actions(self, container: OpenpypeContainer):
+    def _make_local_actions(self, datablocks: Set[bpy.types.ID]):
         """Make local for all actions from objects.
 
         Actions are duplicated to keep the original action from layout.
 
         Args:
-            container (OpenpypeContainer): Loaded container
+            datablocks (Set[bpy.types.ID]): Set of loaded datablocks.
         """
-
         for obj in {
             d
-            for d in container.datablock_refs
-            if isinstance(d.datablock, bpy.types.Object)
-            and d.datablock.animation_data
-            and d.datablock.animation_data.action
+            for d in datablocks
+            if isinstance(d, bpy.types.Object)
+            and d.animation_data
+            and d.animation_data.action
         }:
             # Get loaded action from linked action.
-            loaded_action = obj.datablock.animation_data.action
+            loaded_action = obj.animation_data.action
             loaded_action.use_fake_user = True
 
             # Get orignal action name and add suffix for reference.
@@ -41,7 +41,7 @@ class LayoutLoader(plugin.BlendLoader):
             local_action.name = orignal_action_name
 
             # Assign local action.
-            obj.datablock.animation_data.action = local_action
+            obj.animation_data.action = local_action
 
         # Purge data
         plugin.orphans_purge()
@@ -51,7 +51,7 @@ class LayoutLoader(plugin.BlendLoader):
         container, datablocks = super().load(*args, **kwargs)
 
         # Make loaded actions local, original ones are kept for reference.
-        self._make_local_actions(container)
+        self._make_local_actions(datablocks)
 
         return container, datablocks
 

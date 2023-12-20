@@ -665,12 +665,14 @@ def load_blend_datablocks(
 
         override_datablocks = set()
         for d in datablocks_to_override:
+            print("lala", d)
             # Override datablock and its children
             d = d.override_hierarchy_create(
                 bpy.context.scene,
-                bpy.context.view_layer
-                # NOTE After BL3.4: do_fully_editable=True
+                bpy.context.view_layer,
+                do_fully_editable=True,
             )
+            print(d)
 
             # Update datablocks because could have been renamed
             override_datablocks.add(d)
@@ -691,8 +693,8 @@ def load_blend_datablocks(
 
         for d in override_datablocks:
             # Ensure user override NOTE: will be unecessary after BL3.4
-            if d and hasattr(d.override_library, "is_system_override"):
-                d.override_library.is_system_override = False
+            # if d and hasattr(d.override_library, "is_system_override"):
+            #     d.override_library.is_system_override = False
 
             # Set source_name
             if d.override_library:
