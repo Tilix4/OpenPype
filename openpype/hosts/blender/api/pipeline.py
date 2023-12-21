@@ -180,11 +180,6 @@ def on_open():
     project = os.environ.get("AVALON_PROJECT")
     settings = get_project_settings(project)
 
-    if hasattr(
-        bpy.types, bpy.ops.wm.check_workfile_up_to_date.idname()
-    ):
-        bpy.ops.wm.check_workfile_up_to_date("INVOKE_DEFAULT")
-
     unit_scale_settings = settings.get("blender").get("unit_scale_settings")
     unit_scale_enabled = unit_scale_settings.get("enabled")
     apply_on_opening = unit_scale_settings.get("apply_on_opening")
