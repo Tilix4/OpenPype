@@ -660,26 +660,31 @@ class Loader(LoaderPlugin):
         if not root_datablocks:
             return root_datablocks, datablocks
 
-        # Ensure container metadata
-        for container_datablock in root_datablocks:
-            metadata_update(
-                container_datablock,
-                {
-                    "schema": "openpype:container-2.0",
-                    "id": AVALON_CONTAINER_ID,
-                    "name": context["subset"]["name"],
-                    "namespace": namespace or "",
-                    "loader": self.__class__.__name__,
-                    "representation": str(context["representation"]["_id"]),
-                    "libpath": libpath.as_posix(),
-                    "asset_name": context["asset"]["name"],
-                    "parent": str(context["representation"]["parent"]),
-                    "family": context["representation"]["context"]["family"],
-                    "objectName": container_datablock.name,
-                },
-            )
+        # Check at least one root datablock holds container data
+        # TODO make it a function, maybe a decorator?
+        if not {d for d in root_datablocks if d.get(AVALON_PROPERTY)}:
+            raise RuntimeError(f"No any container data found on library datablocks: {libpath}")
 
-            # Apply options
+        # Ensure container metadata
+        # for container_datablock in root_datablocks:
+        #     metadata_update(
+        #         container_datablock,
+        #         {
+        #             "schema": "openpype:container-2.0",
+        #             "id": AVALON_CONTAINER_ID,
+        #             "name": context["subset"]["name"],
+        #             "namespace": namespace or "",
+        #             "loader": self.__class__.__name__,
+        #             "representation": str(context["representation"]["_id"]),
+        #             "libpath": libpath.as_posix(),
+        #             "asset_name": context["asset"]["name"],
+        #             "parent": str(context["representation"]["parent"]),
+        #             "family": context["representation"]["context"]["family"],
+        #             "objectName": container_datablock.name,
+        #         },
+        #     )
+
+            # Apply options TODO
             if options is not None:
                 self._apply_options(container_datablock, options)
 
@@ -726,15 +731,15 @@ class Loader(LoaderPlugin):
         )
 
         # update metadata
-        for container_datablock in root_datablocks:
-            metadata_update(
-                container,
-                {
-                    "libpath": new_libpath.as_posix(),
-                    "representation": str(representation["_id"]),
-                    "objectName": container.name,
-                },
-            )
+        # for container_datablock in root_datablocks:
+        #     metadata_update(
+        #         container,
+        #         {
+        #             "libpath": new_libpath.as_posix(),
+        #             "representation": str(representation["_id"]),
+        #             "objectName": container.name,
+        #         },
+        #     )
 
         # Clear and purge useless datablocks
         orphans_purge()
@@ -828,23 +833,23 @@ class Loader(LoaderPlugin):
         )
 
         # update metadata
-        for container_datablock in root_datablocks:
-            metadata_update(
-                container_datablock,
-                {
-                    "name": subset_name,
-                    "namespace": container.get(AVALON_PROPERTY, {}).get(
-                        "namespace", ""
-                    ),
-                    "loader": self.__class__.__name__,
-                    "representation": str(representation["_id"]),
-                    "libpath": new_libpath.as_posix(),
-                    "asset_name": asset_name,
-                    "parent": str(representation["parent"]),
-                    "family": representation["context"]["family"],
-                    "objectName": container.name,
-                },
-            )
+        # for container_datablock in root_datablocks:
+        #     metadata_update(
+        #         container_datablock,
+        #         {
+        #             "name": subset_name,
+        #             "namespace": container.get(AVALON_PROPERTY, {}).get(
+        #                 "namespace", ""
+        #             ),
+        #             "loader": self.__class__.__name__,
+        #             "representation": str(representation["_id"]),
+        #             "libpath": new_libpath.as_posix(),
+        #             "asset_name": asset_name,
+        #             "parent": str(representation["parent"]),
+        #             "family": representation["context"]["family"],
+        #             "objectName": container.name,
+        #         },
+        #     )
 
         # Clear and purge useless datablocks
         orphans_purge()
