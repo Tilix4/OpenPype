@@ -922,6 +922,13 @@ def replace_datablocks(
                 datablocks_to_change_parent, bpy.context.scene.collection
             )
 
+    # Update override library operations from asset objects if available.
+    for obj in new_datablocks:
+        if isinstance(obj, bpy.types.Object) and getattr(
+            obj.override_library, "operations_update", None
+        ):
+            obj.override_library.operations_update()
+
 
 def apply_settings(entity: bpy.types.ID, settings: dict):
     """Apply settings for given entity.
