@@ -558,8 +558,6 @@ def build_layout(project_name, asset_name):
                     "exist. Falling back to `cameraMain`"
                 )
 
-            print(f"Camera subset UwU: {camera_subset_name}")
-
             # Download camera published at environment task
             cam_repre = download_subset(
                 project_name, env_asset_name, camera_subset_name
