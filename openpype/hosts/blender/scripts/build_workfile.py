@@ -538,7 +538,7 @@ def build_layout(project_name, asset_name):
                 get_asset_by_name(
                     project_name, get_current_asset_name(), fields=["data"]
                 )["data"]["zou"]["id"]
-            )["data"]["camera"]
+            )["data"].get("camera")
 
             gazu.log_out()
 
