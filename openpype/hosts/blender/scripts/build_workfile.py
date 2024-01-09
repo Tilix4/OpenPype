@@ -32,6 +32,7 @@ from openpype.pipeline import (
     discover_loader_plugins,
     load_container,
     loaders_from_representation,
+    get_current_asset_name,
 )
 from openpype.pipeline.create import get_legacy_creator_by_name
 from openpype.pipeline.load.utils import switch_container
@@ -526,11 +527,40 @@ def build_layout(project_name, asset_name):
                 project_name, env_asset_name, "ConceptReference", "jpg"
             )
 
+            import gazu
+
+            # Connect to gazu
+            gazu.client.set_host(os.environ["KITSU_SERVER"])
+            gazu.log_in(os.environ["KITSU_LOGIN"], os.environ["KITSU_PWD"])
+
+            # Get camera variant
+            camera_variant = gazu.shot.get_shot(
+                get_asset_by_name(
+                    project_name, get_current_asset_name(), fields=["data"]
+                )["data"]["zou"]["id"]
+            )["data"].get("camera")
+
+            gazu.log_out()
+
+            if camera_variant and get_subset_by_name(
+                project_name,
+                f"camera{camera_variant}",
+                get_asset_by_name(
+                    project_name, env_asset_name, fields=["_id"]
+                )["_id"],
+                fields=["_id"],
+            ):
+                camera_subset_name = f"camera{camera_variant}"
+            else:
+                camera_subset_name = "cameraMain"
+                print(
+                    "Camera field is either empty, or its subset doesn't "
+                    "exist. Falling back to `cameraMain`"
+                )
+
             # Download camera published at environment task
             cam_repre = download_subset(
-                project_name,
-                env_asset_name,
-                "cameraMain",
+                project_name, env_asset_name, camera_subset_name
             )
 
             # Wait for download
