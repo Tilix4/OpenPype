@@ -385,6 +385,41 @@ def load_references(
     return errors
 
 
+def get_camera_variant(project_name: str) -> str:
+    """Get camera_variant for current shot.
+
+    Args:
+        project_name (str): Project name.
+
+    Returns:
+        str: Camera variant.
+    """
+    import gazu
+
+    # Connect to gazu
+    gazu.client.set_host(os.environ["KITSU_SERVER"])
+    gazu.log_in(os.environ["KITSU_LOGIN"], os.environ["KITSU_PWD"])
+
+    # Get camera variant
+    camera_variant = gazu.shot.get_shot(
+        get_asset_by_name(
+            project_name, get_current_asset_name(), fields=["data"]
+        )["data"]["zou"]["id"]
+    )["data"].get("camera")
+
+    # Log out from gazu
+    gazu.log_out()
+
+    if camera_variant:
+        return camera_variant
+
+    print(
+        "Camera field is either empty, or its subset doesn't "
+        "exist. Falling back to `cameraMain`"
+    )
+    return "Main"
+
+
 def build_model(project_name, asset_name):
     """Build model workfile.
 
@@ -527,40 +562,10 @@ def build_layout(project_name, asset_name):
                 project_name, env_asset_name, "ConceptReference", "jpg"
             )
 
-            import gazu
-
-            # Connect to gazu
-            gazu.client.set_host(os.environ["KITSU_SERVER"])
-            gazu.log_in(os.environ["KITSU_LOGIN"], os.environ["KITSU_PWD"])
-
-            # Get camera variant
-            camera_variant = gazu.shot.get_shot(
-                get_asset_by_name(
-                    project_name, get_current_asset_name(), fields=["data"]
-                )["data"]["zou"]["id"]
-            )["data"].get("camera")
-
-            gazu.log_out()
-
-            if camera_variant and get_subset_by_name(
-                project_name,
-                f"camera{camera_variant}",
-                get_asset_by_name(
-                    project_name, env_asset_name, fields=["_id"]
-                )["_id"],
-                fields=["_id"],
-            ):
-                camera_subset_name = f"camera{camera_variant}"
-            else:
-                camera_subset_name = "cameraMain"
-                print(
-                    "Camera field is either empty, or its subset doesn't "
-                    "exist. Falling back to `cameraMain`"
-                )
-
             # Download camera published at environment task
             cam_repre = download_subset(
-                project_name, env_asset_name, camera_subset_name
+                project_name, env_asset_name,
+                f"camera{get_camera_variant(project_name)}",
             )
 
             # Wait for download
@@ -660,7 +665,9 @@ def build_anim(project_name, asset_name):
     audio_repre = download_subset(
         project_name, asset_name, "AudioReference", "wav", hero=True
     )
-    camera_repre = download_subset(project_name, asset_name, "cameraMain")
+    camera_repre = download_subset(
+        project_name, asset_name, f"camera{get_camera_variant(project_name)}"
+    )
     wait_for_download(
         project_name,
         [
