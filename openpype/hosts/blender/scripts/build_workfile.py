@@ -385,11 +385,14 @@ def load_references(
     return errors
 
 
-def get_camera_variant(project_name: str):
+def get_camera_variant(project_name: str) -> str:
     """Get camera_variant for current shot.
 
     Args:
         project_name (str): Project name.
+
+    Returns:
+        str: Camera variant.
     """
     import gazu
 
@@ -409,12 +412,12 @@ def get_camera_variant(project_name: str):
 
     if camera_variant:
         return camera_variant
-    else:
-        print(
-            "Camera field is either empty, or its subset doesn't "
-            "exist. Falling back to `cameraMain`"
-        )
-        return "Main"
+
+    print(
+        "Camera field is either empty, or its subset doesn't "
+        "exist. Falling back to `cameraMain`"
+    )
+    return "Main"
 
 
 def build_model(project_name, asset_name):
