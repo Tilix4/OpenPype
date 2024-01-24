@@ -543,6 +543,7 @@ def build_layout(project_name, asset_name):
 
     # Try to load datablocks from environment's setdress
     camera_collection = None
+    camera_subset_name = f"camera{get_camera_variant(project_name)}"
     env_asset_name = None
     setdress_world = None
     concept_repre = None
@@ -564,8 +565,7 @@ def build_layout(project_name, asset_name):
 
             # Download camera published at environment task
             cam_repre = download_subset(
-                project_name, env_asset_name,
-                f"camera{get_camera_variant(project_name)}",
+                project_name, env_asset_name, camera_subset_name
             )
 
             # Wait for download
@@ -612,7 +612,7 @@ def build_layout(project_name, asset_name):
         bpy.ops.scene.create_openpype_instance(
             creator_name="CreateCamera",
             asset_name=asset_name,
-            subset_name="cameraMain",
+            subset_name=camera_subset_name,
             gather_into_collection=True,
         )
         camera_collection = (
