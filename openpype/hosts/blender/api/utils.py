@@ -905,3 +905,18 @@ def replace_datablocks(
             unlink_from_collection(
                 datablocks_to_change_parent, bpy.context.scene.collection
             )
+
+
+def apply_settings(entity: bpy.types.ID, settings: dict):
+    """Apply settings for given entity.
+
+    Arguments:
+        entity (bpy.types.bpy_struct): The entity.
+        settings (dict): Dict of settings.
+    """
+    for option, value in settings.items():
+        if hasattr(entity, option):
+            if isinstance(value, dict):
+                apply_settings(getattr(entity, option), value)
+            else:
+                setattr(entity, option, value)
