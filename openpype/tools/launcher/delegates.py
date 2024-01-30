@@ -3,8 +3,10 @@ from qtpy import QtCore, QtWidgets, QtGui
 from .constants import (
     ANIMATION_START_ROLE,
     ANIMATION_STATE_ROLE,
-    FORCE_NOT_OPEN_WORKFILE_ROLE
+    FORCE_NOT_OPEN_WORKFILE_ROLE,
+    FORCE_DOWNLOAD_LAST_WORKFILE_ROLE,
 )
+from openpype.tools.pyblish_pype.awesome import tags as awesome
 
 
 class ActionDelegate(QtWidgets.QStyledItemDelegate):
@@ -71,14 +73,26 @@ class ActionDelegate(QtWidgets.QStyledItemDelegate):
 
         super(ActionDelegate, self).paint(painter, option, index)
 
+        # Add skip opening last workfile marker
         if index.data(FORCE_NOT_OPEN_WORKFILE_ROLE):
-            rect = QtCore.QRectF(option.rect.x(), option.rect.height(),
-                                 5, 5)
+            rect = QtCore.QRectF(
+                option.rect.x() + 5, option.rect.height() - 22.5, 5, 5
+            )
             painter.setPen(QtCore.Qt.transparent)
             painter.setBrush(QtGui.QColor(200, 0, 0))
             painter.drawEllipse(rect)
 
             painter.setBrush(self.extender_bg_brush)
+
+        # Add force download last workfile marker
+        if index.data(FORCE_DOWNLOAD_LAST_WORKFILE_ROLE):
+            point = QtCore.QPointF(
+                option.rect.width() - 7.5,
+                option.rect.height() - 16,
+            )
+
+            painter.setPen(QtGui.QColor(70, 193, 191))
+            painter.drawText(point, awesome["download"])
 
         is_group = False
         for group_role in self.group_roles:

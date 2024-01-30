@@ -4,6 +4,7 @@ import copy
 import logging
 import collections
 import time
+from typing import List, Dict
 
 import appdirs
 from qtpy import QtCore, QtGui
@@ -42,7 +43,8 @@ from .constants import (
     GROUP_ROLE,
     VARIANT_GROUP_ROLE,
     ACTION_ID_ROLE,
-    FORCE_NOT_OPEN_WORKFILE_ROLE
+    FORCE_NOT_OPEN_WORKFILE_ROLE,
+    FORCE_DOWNLOAD_LAST_WORKFILE_ROLE,
 )
 from .actions import ApplicationAction
 
@@ -67,10 +69,17 @@ class ActionModel(QtGui.QStandardItemModel):
         path = appdirs.user_data_dir("openpype", "pypeclub")
         self.launcher_registry = JSONSettingRegistry("launcher", path)
 
+        # Ensure `force_not_open_workfile` is in the launcher registry
         try:
             _ = self.launcher_registry.get_item("force_not_open_workfile")
         except ValueError:
             self.launcher_registry.set_item("force_not_open_workfile", [])
+
+        # Ensure `force_download_last_workfile` is in the launcher registry
+        try:
+            _ = self.launcher_registry.get_item("force_download_last_workfile")
+        except ValueError:
+            self.launcher_registry.set_item("force_download_last_workfile", [])
 
     def discover(self):
         """Set up Actions cache. Run this for each new project."""
@@ -227,16 +236,35 @@ class ActionModel(QtGui.QStandardItemModel):
 
         self.beginResetModel()
 
-        stored = self.launcher_registry.get_item("force_not_open_workfile")
+        # Get `force_not_open_workfile` setting from launcher registry
+        stored_force_not_open_workfile = self.launcher_registry.get_item(
+            "force_not_open_workfile"
+        )
+
+        # Get `force_download_last_workfile` setting from launcher registry
+        stored_force_download_last_workfile = self.launcher_registry.get_item(
+            "force_download_last_workfile"
+        )
         items = []
         for order in sorted(items_by_order.keys()):
             for item in items_by_order[order]:
                 item_id = str(uuid.uuid4())
                 item.setData(item_id, ACTION_ID_ROLE)
 
-                if self.is_force_not_open_workfile(item,
-                                                   stored):
-                    self.change_action_item(item, True)
+                if self.is_context_menu_checkbox_ticked(
+                    item, stored_force_not_open_workfile
+                ):
+                    # Set skip opening last workfile checkbox
+                    self.change_action_item(
+                        item, True, FORCE_NOT_OPEN_WORKFILE_ROLE
+                    )
+                elif self.is_context_menu_checkbox_ticked(
+                    item, stored_force_download_last_workfile
+                ):
+                    # Set force download last workfile checkbox
+                    self.change_action_item(
+                        item, True, FORCE_DOWNLOAD_LAST_WORKFILE_ROLE
+                    )
 
                 self.items_by_id[item_id] = item
                 items.append(item)
@@ -276,12 +304,20 @@ class ActionModel(QtGui.QStandardItemModel):
             key=lambda action: (action.order, action.name)
         )
 
-    def update_force_not_open_workfile_settings(self, is_checked, action_id):
-        """Store/remove config for forcing to skip opening last workfile.
+    def update_context_menu_settings(
+        self,
+        item_name: str,
+        is_checked: bool,
+        action_id: str,
+        role: QtCore.Qt.UserRole,
+    ):
+        """Store/remove context menu item config.
 
         Args:
+            item_name (str): Context menu item name.
             is_checked (bool): True to add, False to remove
-            action_id (str)
+            action_id (str): Launcher action Identifier.
+            role (QtCore.Qt.UserRole): Context menu item Qt user role.
         """
         action_item = self.items_by_id.get(action_id)
         if not action_item:
@@ -296,7 +332,7 @@ class ActionModel(QtGui.QStandardItemModel):
             for action in actions
         ]
 
-        stored = self.launcher_registry.get_item("force_not_open_workfile")
+        stored = self.launcher_registry.get_item(item_name)
         for actual_data in action_actions_data:
             if is_checked:
                 stored.append(actual_data)
@@ -307,18 +343,34 @@ class ActionModel(QtGui.QStandardItemModel):
                         final_values.append(config)
                 stored = final_values
 
-        self.launcher_registry.set_item("force_not_open_workfile", stored)
+        self.launcher_registry.set_item(item_name, stored)
         self.launcher_registry._get_item.cache_clear()
-        self.change_action_item(action_item, is_checked)
+        self.change_action_item(action_item, is_checked, role)
 
-    def change_action_item(self, item, checked):
-        """Modifies tooltip and sets if opening of last workfile forbidden"""
+    def change_action_item(
+        self,
+        item: QtGui.QStandardItem,
+        checked: bool,
+        checkbox_role: QtCore.Qt.UserRole,
+    ):
+        """Set tooltip and context menu checkbox status.
+
+        Args:
+            item (QtGui.QStandardItem): Action Qt item.
+            checked (bool): True if checkbox should be ticked on.
+            checkbox_role: Checkbox Qt user role.
+        """
         tooltip = item.data(QtCore.Qt.ToolTipRole)
         if checked:
-            tooltip += " (Not opening last workfile)"
+            tooltip += (
+                " (Not opening last workfile)" if (
+                    checkbox_role == FORCE_NOT_OPEN_WORKFILE_ROLE
+                )
+                else " (Force download last workfile)"
+            )
 
         item.setData(tooltip, QtCore.Qt.ToolTipRole)
-        item.setData(checked, FORCE_NOT_OPEN_WORKFILE_ROLE)
+        item.setData(checked, checkbox_role)
 
     def is_application_action(self, action):
         """Checks if item is of a ApplicationAction type
@@ -331,16 +383,18 @@ class ActionModel(QtGui.QStandardItemModel):
 
         return ApplicationAction in action.__bases__
 
-    def is_force_not_open_workfile(self, item, stored):
-        """Checks if application for task is marked to not open workfile
-
-        There might be specific tasks where is unwanted to open workfile right
-        always (broken file, low performance). This allows artist to mark to
-        skip opening for combination (project, asset, task_name, app)
+    def is_context_menu_checkbox_ticked(
+        self, item: QtGui.QStandardItem, stored: List[Dict]
+    ) -> bool:
+        """Check if the specified context menu checkbox is ticked for
+        the selected application, asset and task.
 
         Args:
-            item (QStandardItem)
-            stored (list) of dict
+            item (QStandardItem): Context menu item.
+            stored (List[Dict]): Stored settings in action registry.
+
+        Returns:
+            bool: True if the context menu checkbox is ticked.
         """
 
         actions = item.data(ACTION_ROLE)

@@ -16,6 +16,8 @@ from openpype.pipeline.template_data import get_template_data
 from openpype.pipeline.workfile.path_resolving import (
     get_workfile_template_key,
     get_last_workfile_representation,
+    get_last_workfile_with_version,
+    get_workdir,
 )
 from openpype.settings.lib import get_project_settings
 
@@ -52,9 +54,12 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
             self.log.debug("Sync server module is not enabled or available")
             return
 
-        # Check there is no workfile available
+        # Skip if there are local workfiles
+        # and force download last workfile is active
         last_workfile = self.data.get("last_workfile_path")
-        if os.path.exists(last_workfile):
+        if os.path.exists(last_workfile) and not self.data.get(
+            "force_download_last_workfile"
+        ):
             self.log.debug(
                 "Last workfile exists. Skipping {} process.".format(
                     self.__class__.__name__
@@ -157,9 +162,38 @@ class CopyLastPublishedWorkfile(PreLaunchHook):
         )
 
         extension = last_published_workfile_path.split(".")[-1]
-        workfile_data["version"] = (
-                workfile_representation["context"]["version"] + 1)
+
+        # Get last published workfile version
+        last_published_workfile_version = workfile_representation["context"][
+            "version"
+        ]
+
+        # Get last local workfile version
+        last_local_workfile_version = get_last_workfile_with_version(
+            get_workdir(
+                project_doc,
+                asset_doc,
+                task_name,
+                host_name,
+                anatomy=anatomy,
+                template_key=template_key,
+                project_settings=project_settings,
+            ),
+            anatomy.templates[template_key]["file"],
+            workfile_data,
+            [extension],
+        )[1]
+
+        # Use last published workfile version + 1
+        # or last local workfile version + 1 if it's higher
+        workfile_data["version"] = max(
+            (
+                last_local_workfile_version or 0,
+                last_published_workfile_version or 0,
+            )
+        ) + 1
         workfile_data["ext"] = extension
+        workfile_data["comment"] = "downloaded"
 
         anatomy_result = anatomy.format(workfile_data)
         local_workfile_path = anatomy_result[template_key]["path"]
