@@ -355,15 +355,15 @@ class ExtractReview(pyblish.api.InstancePlugin):
                 )
 
             # create or update outputName
-            output_name = new_repre.get("outputName", "")
-            output_ext = new_repre["ext"]
-            if output_name:
-                output_name += "_"
-            output_name += output_def["filename_suffix"]
+            output_name = new_repre.get("outputName")
+            if output_name is None:  # TODO
+                output_name = f"{output_def['filename_suffix']}"
+
             if temp_data["without_handles"]:
                 output_name += "_noHandles"
 
             # add outputName to anatomy format fill_data
+            output_ext = new_repre["ext"]
             fill_data.update({
                 "output": output_name,
                 "ext": output_ext

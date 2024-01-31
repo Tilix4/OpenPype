@@ -319,6 +319,7 @@ class IntegrateAsset(pyblish.api.InstancePlugin):
 
             for src, dst in prepared["transfers"]:
                 # todo: add support for hardlink transfers
+                print("ZOUZOU", src, dst)
                 file_transactions.add(src, dst)
 
             prepared_representations.append(prepared)
@@ -339,6 +340,8 @@ class IntegrateAsset(pyblish.api.InstancePlugin):
 
                 file_transactions.add(src, dst, mode=copy_mode)
                 resource_destinations.add(os.path.abspath(dst))
+
+        # raise
 
         # Bulk write to the database
         # We write the subset and version to the database before the File
@@ -641,6 +644,12 @@ class IntegrateAsset(pyblish.api.InstancePlugin):
             if value is not None:
                 template_data[anatomy_key] = value
 
+        print("MOUUUU")
+        from pprint import pprint
+        pprint(template_data)
+
+        # raise
+
         self.log.debug("Anatomy template name: {}".format(template_name))
         anatomy = instance.context.data["anatomy"]
         publish_template_category = anatomy.templates[template_name]
@@ -808,9 +817,13 @@ class IntegrateAsset(pyblish.api.InstancePlugin):
             if is_udim:
                 template_data["udim"] = repre["udim"][0]
             # Construct destination filepath from template
+            print("rutatat", path_template_obj)
+            from pprint import pprint
+            pprint(template_data)
             template_filled = path_template_obj.format_strict(template_data)
             repre_context = template_filled.used_values
             dst = os.path.normpath(template_filled)
+            print("TOTO", dst, template_filled) # TODO
 
             # Single file transfer
             src = os.path.join(stagingdir, files)
