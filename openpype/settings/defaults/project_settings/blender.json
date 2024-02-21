@@ -198,6 +198,7 @@
             "enabled": true,
             "optional": true,
             "active": true,
+            "task_types": ["Layout", "Animation"],
             "presets": {
                 "default": {
                     "image_settings": {
