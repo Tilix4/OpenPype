@@ -23,7 +23,16 @@ class ExtractPlayblast(Extractor):
     optional = True
     order = extract_thumbnail.ExtractThumbnail.order - 0.002
 
+    task_types = []
+
     def process(self, instance):
+        # Check current task type
+        if instance.data.get("task") not in self.task_types:
+            self.log.info(
+                "Skipped instance. Current task not listed in task types."
+            )
+            return
+
         self.log.info("Extracting capture..")
 
         # get scene fps

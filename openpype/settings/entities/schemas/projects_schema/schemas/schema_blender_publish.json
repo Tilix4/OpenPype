@@ -237,6 +237,11 @@
                     "label": "Active"
                 },
                 {
+                    "key": "task_types",
+                    "label": "Task types",
+                    "type": "task-types-enum"
+                },
+                {
                     "type": "raw-json",
                     "key": "presets",
                     "label": "Presets"
