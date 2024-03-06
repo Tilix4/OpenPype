@@ -29,7 +29,7 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
     _processed_tasks = []
 
     def format_publish_comment(self, instance):
-        """Format the instance's publish comment
+        """Format the instance's publish comment.
 
         Formats `instance.data` against the custom template.
         """
@@ -81,7 +81,12 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
             )
 
     def skip_instance(self, context, instance, kitsu_task: dict) -> bool:
-        """Defines if the instance needs to be skipped or not."""
+        """Define if the instance needs to be skipped or not.
+
+        Returns:
+            bool: True if the instance needs to be skipped. Else False.
+        """
+        # Check already existing comment
         if context.data.get("kitsu_comment"):
             self.log.info(
                 "Kitsu comment already set, "
@@ -89,6 +94,7 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
             )
             return True
 
+        # Check kitsu task
         if not kitsu_task:
             self.log.warning("No kitsu task.")
             return True
@@ -98,20 +104,11 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
                 "skipping comment creation for instance..."
             )
             return True
+
+        # Check family and families
         families = set(
             [instance.data["family"]] + instance.data.get("families", [])
         )
-
-        try:
-            self.log.info(f"{self.family = }, {families = }")
-        except Exception:
-            pass
-
-        try:
-            self.log.info(f"{self.families = }, {families = }")
-        except Exception:
-            pass
-
         if (getattr(self, "family", None) and self.family not in families) or (
             getattr(self, "families", [])
             and not any(f in families for f in self.families)
@@ -131,7 +128,6 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
         for instance in context:
             kitsu_task = instance.data.get("kitsu_task")
             if self.skip_instance(context, instance, kitsu_task):
-                self.log.info(f"Skip instance {instance}")
                 continue
 
             # Get note status, by default uses the task status for the note
@@ -172,12 +168,6 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
 
                     if allow_status_change:
                         break
-
-            self.log.info("----------------- DATA")
-            self.log.info(f"{self.set_status_note = }")
-            self.log.info(f"{self.note_status_shortname = }")
-            self.log.info(f"{self.status_change_conditions = }")
-            self.log.info(f"{allow_status_change = }")
 
             # Set note status
             if self.set_status_note and allow_status_change:
