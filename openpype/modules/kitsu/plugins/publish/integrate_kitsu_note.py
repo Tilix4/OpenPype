@@ -25,6 +25,9 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
         "comment_template": "{comment}",
     }
 
+    # private
+    _processed_tasks = []
+
     def format_publish_comment(self, instance):
         """Format the instance's publish comment
 
@@ -48,18 +51,87 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
         pattern = r"\{([^}]*)\}"
         return re.sub(pattern, replace_missing_key, template)
 
-    def process(self, context):
-        for instance in context:
-            # Check if instance is a review by checking its family
-            # Allow a match to primary family or any of families
-            families = set(
-                [instance.data["family"]] + instance.data.get("families", [])
-            )
-            if "review" not in families:
-                continue
+    def get_settings_from_context(self, context):
+        """Get settings from context if they're different.
 
+        As we sometimes have wrong loaded settings in this integrator,
+        but have the good ones loaded in the context, it's better to use them.
+        """
+        kitsu_note = (
+            context.data["project_settings"]
+            .get("kitsu", {})
+            .get("publish", {})
+            .get(self.__class__.__name__, {})
+        )
+        if (
+            kitsu_note.get("set_status_note") != self.set_status_note,
+            kitsu_note.get("note_status_shortname")
+            != self.note_status_shortname,
+            kitsu_note.get("status_change_conditions")
+            != self.status_change_conditions,
+        ):
+            self.set_status_note = kitsu_note["set_status_note"]
+            self.note_status_shortname = kitsu_note["note_status_shortname"]
+            self.status_change_conditions = kitsu_note[
+                "status_change_conditions"
+            ]
+            self.log.info(
+                "Settings were loaded from context as they are "
+                "different from loaded project settings."
+            )
+
+    def skip_instance(self, context, instance, kitsu_task: dict) -> bool:
+        """Defines if the instance needs to be skipped or not."""
+        if context.data.get("kitsu_comment"):
+            self.log.info(
+                "Kitsu comment already set, "
+                "skipping comment creation for instance..."
+            )
+            return True
+
+        if not kitsu_task:
+            self.log.warning("No kitsu task.")
+            return True
+        elif kitsu_task in self._processed_tasks:
+            self.log.info(
+                "Kitsu task already processed, "
+                "skipping comment creation for instance..."
+            )
+            return True
+        families = set(
+            [instance.data["family"]] + instance.data.get("families", [])
+        )
+
+        try:
+            self.log.info(f"{self.family = }, {families = }")
+        except Exception:
+            pass
+
+        try:
+            self.log.info(f"{self.families = }, {families = }")
+        except Exception:
+            pass
+
+        if (getattr(self, "family", None) and self.family not in families) or (
+            getattr(self, "families", [])
+            and not any(f in families for f in self.families)
+        ):
+            self.log.info(
+                "Instance family or families doesn't match integrator, "
+                "skipping comment creation for instance..."
+            )
+            return True
+        return False
+
+    def process(self, context):
+        # Force Kitsu note settings as they're sometimes
+        # not loaded correctly when using rez
+        self.get_settings_from_context(context)
+
+        for instance in context:
             kitsu_task = instance.data.get("kitsu_task")
-            if not kitsu_task:
+            if self.skip_instance(context, instance, kitsu_task):
+                self.log.info(f"Skip instance {instance}")
                 continue
 
             # Get note status, by default uses the task status for the note
@@ -101,6 +173,12 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
                     if allow_status_change:
                         break
 
+            self.log.info("----------------- DATA")
+            self.log.info(f"{self.set_status_note = }")
+            self.log.info(f"{self.note_status_shortname = }")
+            self.log.info(f"{self.status_change_conditions = }")
+            self.log.info(f"{allow_status_change = }")
+
             # Set note status
             if self.set_status_note and allow_status_change:
                 kitsu_status = gazu.task.get_task_status_by_short_name(
@@ -111,9 +189,14 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
                     self.log.info("Note Kitsu status: {}".format(note_status))
                 else:
                     self.log.info(
-                        "Cannot find {} status. The status will not be "
-                        "changed!".format(self.note_status_shortname)
+                        f"Cannot find {self.note_status_shortname} status. "
+                        f"The status will not be changed!"
                     )
+            else:
+                self.log.info(
+                    "Don't update status note. "
+                    f"{self.set_status_note = }, {allow_status_change = }"
+                )
 
             # Get comment text body
             publish_comment = instance.data.get("comment")
@@ -133,4 +216,5 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
                 kitsu_task, note_status, comment=publish_comment
             )
 
-            instance.data["kitsu_comment"] = kitsu_comment
+            context.data["kitsu_comment"] = kitsu_comment
+            self._processed_tasks.append(kitsu_task)
