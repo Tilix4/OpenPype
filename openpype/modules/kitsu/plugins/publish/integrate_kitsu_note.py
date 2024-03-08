@@ -25,7 +25,6 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
         "comment_template": "{comment}",
     }
 
-    # private
     _processed_tasks = []
 
     def format_publish_comment(self, instance):
@@ -63,18 +62,26 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
             .get("publish", {})
             .get(self.__class__.__name__, {})
         )
-        if (
-            kitsu_note.get("set_status_note") != self.set_status_note,
-            kitsu_note.get("note_status_shortname")
-            != self.note_status_shortname,
-            kitsu_note.get("status_change_conditions")
-            != self.status_change_conditions,
-        ):
+        get_from_context = False
+        if kitsu_note.get("set_status_note") != self.set_status_note:
             self.set_status_note = kitsu_note["set_status_note"]
+            get_from_context = True
+        if (
+            kitsu_note.get("note_status_shortname")
+            != self.note_status_shortname
+        ):
             self.note_status_shortname = kitsu_note["note_status_shortname"]
+            get_from_context = True
+        if (
+            kitsu_note.get("status_change_conditions")
+            != self.status_change_conditions
+        ):
             self.status_change_conditions = kitsu_note[
                 "status_change_conditions"
             ]
+            get_from_context = True
+
+        if get_from_context:
             self.log.info(
                 "Settings were loaded from context as they are "
                 "different from loaded project settings."
