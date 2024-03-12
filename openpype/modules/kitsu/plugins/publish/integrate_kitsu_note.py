@@ -62,16 +62,23 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
             .get("publish", {})
             .get(self.__class__.__name__, {})
         )
-        get_from_context = False
+
+        settings_from_context = []
         if kitsu_note.get("set_status_note") != self.set_status_note:
             self.set_status_note = kitsu_note["set_status_note"]
-            get_from_context = True
+            settings_from_context.append(
+                ("set_status_note", self.set_status_note)
+            )
+
         if (
             kitsu_note.get("note_status_shortname")
             != self.note_status_shortname
         ):
             self.note_status_shortname = kitsu_note["note_status_shortname"]
-            get_from_context = True
+            settings_from_context.append(
+                ("note_status_shortname", self.note_status_shortname)
+            )
+
         if (
             kitsu_note.get("status_change_conditions")
             != self.status_change_conditions
@@ -79,13 +86,17 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
             self.status_change_conditions = kitsu_note[
                 "status_change_conditions"
             ]
-            get_from_context = True
+            settings_from_context.append(
+                ("status_change_conditions", self.status_change_conditions)
+            )
 
-        if get_from_context:
+        if settings_from_context:
             self.log.info(
-                "Settings were loaded from context as they are "
+                "Following settings were loaded from context as they were "
                 "different from loaded project settings."
             )
+            for setting in settings_from_context:
+                self.log.info(f"- {setting[0]}: {setting[1]}")
 
     def skip_instance(self, context, instance, kitsu_task: dict) -> bool:
         """Define if the instance needs to be skipped or not.
