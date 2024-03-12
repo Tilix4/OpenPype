@@ -63,20 +63,18 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
             .get(self.__class__.__name__, {})
         )
 
-        settings_from_context = []
+        settings_from_context = {}
         if kitsu_note.get("set_status_note") != self.set_status_note:
             self.set_status_note = kitsu_note["set_status_note"]
-            settings_from_context.append(
-                ("set_status_note", self.set_status_note)
-            )
+            settings_from_context["set_status_note"] = self.set_status_note
 
         if (
             kitsu_note.get("note_status_shortname")
             != self.note_status_shortname
         ):
             self.note_status_shortname = kitsu_note["note_status_shortname"]
-            settings_from_context.append(
-                ("note_status_shortname", self.note_status_shortname)
+            settings_from_context["note_status_shortname"] = (
+                self.note_status_shortname
             )
 
         if (
@@ -86,8 +84,8 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
             self.status_change_conditions = kitsu_note[
                 "status_change_conditions"
             ]
-            settings_from_context.append(
-                ("status_change_conditions", self.status_change_conditions)
+            settings_from_context["status_change_conditions"] = (
+                self.status_change_conditions
             )
 
         if settings_from_context:
@@ -95,8 +93,8 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
                 "Following settings were loaded from context as they were "
                 "different from loaded project settings."
             )
-            for setting in settings_from_context:
-                self.log.info(f"- {setting[0]}: {setting[1]}")
+            for setting_name, setting_value in settings_from_context.items():
+                self.log.info(f"- {setting_name}: {setting_value}")
 
     def skip_instance(self, context, instance, kitsu_task: dict) -> bool:
         """Define if the instance needs to be skipped or not.
