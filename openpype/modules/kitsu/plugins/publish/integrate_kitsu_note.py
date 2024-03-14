@@ -222,5 +222,9 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
                 kitsu_task, note_status, comment=publish_comment
             )
 
+            # In context, it will be used by IntegrateKitsuNoteWorkfileOnly
             context.data["kitsu_comment"] = kitsu_comment
+            # In instance, it will be used by IntegrateKitsuReview
+            instance.data["kitsu_comment"] = kitsu_comment
+
             self._processed_tasks.append(kitsu_task)
