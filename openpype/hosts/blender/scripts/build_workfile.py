@@ -420,6 +420,24 @@ def get_camera_variant(project_name: str) -> str:
     return "Main"
 
 
+def ensure_camera_to_geonodes(camera: bpy.types.Object):
+    """Ensure camera to geonodes of every objects.
+
+    Args:
+        camera (bpy.types.Object): Camera object.
+    """
+    camera_field = "_SceneCamera"
+
+    for obj in bpy.data.objects:
+        for modifier in obj.modifiers:
+            if modifier.type == "NODES" and modifier.node_group:
+                # Force load node group
+                modifier.node_group = modifier.node_group
+
+                if node_input := modifier.node_group.inputs.get(camera_field):
+                    modifier[node_input.identifier] = camera
+
+
 def build_model(project_name, asset_name):
     """Build model workfile.
 
@@ -629,6 +647,13 @@ def build_layout(project_name, asset_name):
         datacol="collections",
         datablock_name=camera_collection.name,
         use_selection=False,
+    )
+
+    # Ensure camera to geonodes
+    ensure_camera_to_geonodes(
+        next(
+            (obj for obj in camera_collection.objects if obj.type == "CAMERA")
+        )
     )
 
     # Load Audio and Board
@@ -890,6 +915,15 @@ def build_anim(project_name, asset_name):
                 datacol="collections",
                 datablock_name=camera_collection.name,
                 use_selection=False,
+            )
+
+            # Ensure camera to geonodes
+            ensure_camera_to_geonodes(
+                next(
+                    obj
+                    for obj in camera_collection.objects
+                    if obj.type == "CAMERA"
+                )
             )
 
     instances_to_create = {}
