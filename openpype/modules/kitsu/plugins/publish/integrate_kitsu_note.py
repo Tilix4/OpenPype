@@ -73,9 +73,9 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
             != self.note_status_shortname
         ):
             self.note_status_shortname = kitsu_note["note_status_shortname"]
-            settings_from_context["note_status_shortname"] = (
-                self.note_status_shortname
-            )
+            settings_from_context[
+                "note_status_shortname"
+            ] = self.note_status_shortname
 
         if (
             kitsu_note.get("status_change_conditions")
@@ -84,9 +84,9 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
             self.status_change_conditions = kitsu_note[
                 "status_change_conditions"
             ]
-            settings_from_context["status_change_conditions"] = (
-                self.status_change_conditions
-            )
+            settings_from_context[
+                "status_change_conditions"
+            ] = self.status_change_conditions
 
         if settings_from_context:
             self.log.info(
@@ -96,20 +96,12 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
             for setting_name, setting_value in settings_from_context.items():
                 self.log.info(f"- {setting_name}: {setting_value}")
 
-    def skip_instance(self, context, instance, kitsu_task: dict) -> bool:
+    def skip_instance(self, instance, kitsu_task: dict) -> bool:
         """Define if the instance needs to be skipped or not.
 
         Returns:
             bool: True if the instance needs to be skipped. Else False.
         """
-        # Check already existing comment
-        if context.data.get("kitsu_comment"):
-            self.log.info(
-                "Kitsu comment already set, "
-                "skipping comment creation for instance..."
-            )
-            return True
-
         # Check kitsu task
         if not kitsu_task:
             self.log.warning("No kitsu task.")
@@ -142,8 +134,19 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
         self.get_settings_from_context(context)
 
         for instance in context:
+            self.log.info(instance.data)
+            self.log.info([instance for instance in context])
+            if any(
+                instance.data.get("kitsu_comment")
+                for instance in context
+            ):
+                self.log.info(
+                    "Kitsu comment already set, skip comment creation."
+                )
+                break
+
             kitsu_task = instance.data.get("kitsu_task")
-            if self.skip_instance(context, instance, kitsu_task):
+            if self.skip_instance(instance, kitsu_task):
                 continue
 
             # Get note status, by default uses the task status for the note
@@ -222,9 +225,5 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
                 kitsu_task, note_status, comment=publish_comment
             )
 
-            # In context, it will be used by IntegrateKitsuNoteWorkfileOnly
-            context.data["kitsu_comment"] = kitsu_comment
-            # In instance, it will be used by IntegrateKitsuReview
             instance.data["kitsu_comment"] = kitsu_comment
-
             self._processed_tasks.append(kitsu_task)
