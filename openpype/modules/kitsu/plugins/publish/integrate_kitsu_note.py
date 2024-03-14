@@ -4,7 +4,7 @@ import pyblish.api
 import re
 
 
-class IntegrateKitsuNote(pyblish.api.ContextPlugin):
+class IntegrateKitsuNote(pyblish.api.InstancePlugin):
     """Integrate Kitsu Note"""
 
     order = pyblish.api.IntegratorOrder - 0.01
@@ -50,14 +50,14 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
         pattern = r"\{([^}]*)\}"
         return re.sub(pattern, replace_missing_key, template)
 
-    def get_settings_from_context(self, context):
+    def get_settings_from_context(self, instance):
         """Get settings from context if they're different.
 
         As we sometimes have wrong loaded settings in this integrator,
         but have the good ones loaded in the context, it's better to use them.
         """
         kitsu_note = (
-            context.data["project_settings"]
+            instance.context.data["project_settings"]
             .get("kitsu", {})
             .get("publish", {})
             .get(self.__class__.__name__, {})
@@ -128,102 +128,85 @@ class IntegrateKitsuNote(pyblish.api.ContextPlugin):
             return True
         return False
 
-    def process(self, context):
+    def process(self, instance):
         # Force Kitsu note settings as they're sometimes
         # not loaded correctly when using rez
-        self.get_settings_from_context(context)
+        self.get_settings_from_context(instance)
 
-        for instance in context:
-            self.log.info(instance.data)
-            self.log.info([instance for instance in context])
-            if any(
-                instance.data.get("kitsu_comment")
-                for instance in context
-            ):
-                self.log.info(
-                    "Kitsu comment already set, skip comment creation."
-                )
+        kitsu_task = instance.data.get("kitsu_task")
+        if self.skip_instance(instance, kitsu_task):
+            return
+
+        # Get note status, by default uses the task status for the note
+        # if it is not specified in the configuration
+        shortname = kitsu_task["task_status"]["short_name"].upper()
+        note_status = kitsu_task["task_status_id"]
+
+        # Check if any status condition is not met
+        allow_status_change = True
+        for status_cond in self.status_change_conditions[
+            "status_conditions"
+        ]:
+            condition = status_cond["condition"] == "equal"
+            match = status_cond["short_name"].upper() == shortname
+            if match and not condition or condition and not match:
+                allow_status_change = False
                 break
 
-            kitsu_task = instance.data.get("kitsu_task")
-            if self.skip_instance(instance, kitsu_task):
-                continue
-
-            # Get note status, by default uses the task status for the note
-            # if it is not specified in the configuration
-            shortname = kitsu_task["task_status"]["short_name"].upper()
-            note_status = kitsu_task["task_status_id"]
-
-            # Check if any status condition is not met
-            allow_status_change = True
-            for status_cond in self.status_change_conditions[
-                "status_conditions"
+        if allow_status_change:
+            # Check if any family requirement is met
+            for family_requirement in self.status_change_conditions[
+                "family_requirements"
             ]:
-                condition = status_cond["condition"] == "equal"
-                match = status_cond["short_name"].upper() == shortname
+                condition = family_requirement["condition"] == "equal"
+                match = (
+                    family_requirement["family"].lower() == instance.data.get(
+                        "family"
+                    )
+                )
                 if match and not condition or condition and not match:
                     allow_status_change = False
                     break
 
-            if allow_status_change:
-                # Get families
-                families = {
-                    instance.data.get("family")
-                    for instance in context
-                    if instance.data.get("publish")
-                }
+                if allow_status_change:
+                    break
 
-                # Check if any family requirement is met
-                for family_requirement in self.status_change_conditions[
-                    "family_requirements"
-                ]:
-                    condition = family_requirement["condition"] == "equal"
-
-                    for family in families:
-                        match = family_requirement["family"].lower() == family
-                        if match and not condition or condition and not match:
-                            allow_status_change = False
-                            break
-
-                    if allow_status_change:
-                        break
-
-            # Set note status
-            if self.set_status_note and allow_status_change:
-                kitsu_status = gazu.task.get_task_status_by_short_name(
-                    self.note_status_shortname
-                )
-                if kitsu_status:
-                    note_status = kitsu_status
-                    self.log.info("Note Kitsu status: {}".format(note_status))
-                else:
-                    self.log.info(
-                        f"Cannot find {self.note_status_shortname} status. "
-                        f"The status will not be changed!"
-                    )
+        # Set note status
+        if self.set_status_note and allow_status_change:
+            kitsu_status = gazu.task.get_task_status_by_short_name(
+                self.note_status_shortname
+            )
+            if kitsu_status:
+                note_status = kitsu_status
+                self.log.info("Note Kitsu status: {}".format(note_status))
             else:
                 self.log.info(
-                    "Don't update status note. "
-                    f"{self.set_status_note = }, {allow_status_change = }"
+                    f"Cannot find {self.note_status_shortname} status. "
+                    f"The status will not be changed!"
                 )
-
-            # Get comment text body
-            publish_comment = instance.data.get("comment")
-            if self.custom_comment_template["enabled"]:
-                publish_comment = self.format_publish_comment(instance)
-
-            if not publish_comment:
-                self.log.info("Comment is not set.")
-            else:
-                self.log.debug("Comment is `{}`".format(publish_comment))
-
-            # Add comment to kitsu task
-            self.log.debug(
-                "Add new note in tasks id {}".format(kitsu_task["id"])
-            )
-            kitsu_comment = gazu.task.add_comment(
-                kitsu_task, note_status, comment=publish_comment
+        else:
+            self.log.info(
+                "Don't update status note. "
+                f"{self.set_status_note = }, {allow_status_change = }"
             )
 
-            instance.data["kitsu_comment"] = kitsu_comment
-            self._processed_tasks.append(kitsu_task)
+        # Get comment text body
+        publish_comment = instance.data.get("comment")
+        if self.custom_comment_template["enabled"]:
+            publish_comment = self.format_publish_comment(instance)
+
+        if not publish_comment:
+            self.log.info("Comment is not set.")
+        else:
+            self.log.debug("Comment is `{}`".format(publish_comment))
+
+        # Add comment to kitsu task
+        self.log.debug(
+            "Add new note in tasks id {}".format(kitsu_task["id"])
+        )
+        kitsu_comment = gazu.task.add_comment(
+            kitsu_task, note_status, comment=publish_comment
+        )
+
+        instance.data["kitsu_comment"] = kitsu_comment
+        self._processed_tasks.append(kitsu_task)
