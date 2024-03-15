@@ -102,6 +102,16 @@ class IntegrateKitsuNote(pyblish.api.InstancePlugin):
         Returns:
             bool: True if the instance needs to be skipped. Else False.
         """
+
+        # Check already existing comment in instance
+        if instance.data.get("kitsu_comment"):
+            self.log.info(
+                "Kitsu comment already set, "
+                "skipping comment creation for "
+                f"instance {instance.data['family']}"
+            )
+            return True
+
         # Check kitsu task
         if not kitsu_task:
             self.log.warning("No kitsu task.")
@@ -113,19 +123,6 @@ class IntegrateKitsuNote(pyblish.api.InstancePlugin):
             )
             return True
 
-        # Check family and families
-        families = set(
-            [instance.data["family"]] + instance.data.get("families", [])
-        )
-        if (getattr(self, "family", None) and self.family not in families) or (
-            getattr(self, "families", [])
-            and not any(f in families for f in self.families)
-        ):
-            self.log.info(
-                "Instance family or families doesn't match integrator, "
-                "skipping comment creation for instance..."
-            )
-            return True
         return False
 
     def process(self, instance):
