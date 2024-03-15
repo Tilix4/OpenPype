@@ -3,15 +3,15 @@ import gazu
 import pyblish.api
 import re
 
-from openpype.modules.kitsu.plugins.publish import integrate_kitsu_note
+from openpype.modules.kitsu.plugins.publish import integrate_kitsu_review
 
 
 class IntegrateKitsuComment(pyblish.api.InstancePlugin):
     """Integrate Kitsu Comment"""
 
-    order = integrate_kitsu_note.IntegrateKitsuNote.order + 0.00001
+    order = integrate_kitsu_review.IntegrateKitsuReview.order
     label = "Kitsu Comment"
-    families = integrate_kitsu_note.IntegrateKitsuNote.families
+    families = integrate_kitsu_review.IntegrateKitsuReview.families
 
     # comment settings
     custom_comment_template = {
