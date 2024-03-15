@@ -110,7 +110,15 @@
                                     }
                                 }
                             ]
-                        },
+                        }
+                    ]
+                },
+                {
+                    "type": "dict",
+                    "collapsible": true,
+                    "key": "IntegrateKitsuComment",
+                    "label": "Integrate Kitsu Comment",
+                    "children": [
                         {
                             "type": "dict",
                             "collapsible": true,

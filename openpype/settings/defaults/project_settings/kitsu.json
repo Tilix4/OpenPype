@@ -11,7 +11,9 @@
             "status_change_conditions": {
                 "status_conditions": [],
                 "family_requirements": []
-            },
+            }
+        },
+        "IntegrateKitsuComment": {
             "custom_comment_template": {
                 "enabled": false,
                 "comment_template": "{comment}\n\n|  |  |\n|--|--|\n| version| `{version}` |\n| family | `{family}` |\n| name | `{name}` |"

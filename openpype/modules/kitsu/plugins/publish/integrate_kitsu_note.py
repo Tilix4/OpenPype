@@ -19,36 +19,7 @@ class IntegrateKitsuNote(pyblish.api.InstancePlugin):
         "family_requirements": [],
     }
 
-    # comment settings
-    custom_comment_template = {
-        "enabled": False,
-        "comment_template": "{comment}",
-    }
-
     _processed_tasks = []
-
-    def format_publish_comment(self, instance):
-        """Format the instance's publish comment.
-
-        Formats `instance.data` against the custom template.
-        """
-
-        def replace_missing_key(match):
-            """If key is not found in kwargs, set None instead"""
-            key = match.group(1)
-            if key not in instance.data:
-                self.log.warning(
-                    "Key '{}' was not found in instance.data "
-                    "and will be rendered as an empty string "
-                    "in the comment".format(key)
-                )
-                return ""
-            else:
-                return str(instance.data[key])
-
-        template = self.custom_comment_template["comment_template"]
-        pattern = r"\{([^}]*)\}"
-        return re.sub(pattern, replace_missing_key, template)
 
     def get_settings_from_context(self, instance):
         """Get settings from context if they're different.
@@ -183,20 +154,11 @@ class IntegrateKitsuNote(pyblish.api.InstancePlugin):
                 f"{self.set_status_note = }, {allow_status_change = }"
             )
 
-        # Get comment text body
-        publish_comment = instance.data.get("comment")
-        if self.custom_comment_template["enabled"]:
-            publish_comment = self.format_publish_comment(instance)
-
-        if not publish_comment:
-            self.log.info("Comment is not set.")
-        else:
-            self.log.debug("Comment is `{}`".format(publish_comment))
-
         # Add comment to kitsu task
         self.log.debug("Add new note in tasks id {}".format(kitsu_task["id"]))
         kitsu_comment = gazu.task.add_comment(
-            kitsu_task, note_status, comment=publish_comment
+            kitsu_task,
+            note_status,
         )
 
         instance.data["kitsu_comment"] = kitsu_comment
