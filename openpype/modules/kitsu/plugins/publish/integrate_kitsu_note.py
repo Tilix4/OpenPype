@@ -73,9 +73,9 @@ class IntegrateKitsuNote(pyblish.api.InstancePlugin):
             != self.note_status_shortname
         ):
             self.note_status_shortname = kitsu_note["note_status_shortname"]
-            settings_from_context[
-                "note_status_shortname"
-            ] = self.note_status_shortname
+            settings_from_context["note_status_shortname"] = (
+                self.note_status_shortname
+            )
 
         if (
             kitsu_note.get("status_change_conditions")
@@ -84,9 +84,9 @@ class IntegrateKitsuNote(pyblish.api.InstancePlugin):
             self.status_change_conditions = kitsu_note[
                 "status_change_conditions"
             ]
-            settings_from_context[
-                "status_change_conditions"
-            ] = self.status_change_conditions
+            settings_from_context["status_change_conditions"] = (
+                self.status_change_conditions
+            )
 
         if settings_from_context:
             self.log.info(
@@ -141,9 +141,7 @@ class IntegrateKitsuNote(pyblish.api.InstancePlugin):
 
         # Check if any status condition is not met
         allow_status_change = True
-        for status_cond in self.status_change_conditions[
-            "status_conditions"
-        ]:
+        for status_cond in self.status_change_conditions["status_conditions"]:
             condition = status_cond["condition"] == "equal"
             match = status_cond["short_name"].upper() == shortname
             if match and not condition or condition and not match:
@@ -156,11 +154,9 @@ class IntegrateKitsuNote(pyblish.api.InstancePlugin):
                 "family_requirements"
             ]:
                 condition = family_requirement["condition"] == "equal"
-                match = (
-                    family_requirement["family"].lower() == instance.data.get(
-                        "family"
-                    )
-                )
+                match = family_requirement[
+                    "family"
+                ].lower() == instance.data.get("family")
                 if match and not condition or condition and not match:
                     allow_status_change = False
                     break
@@ -198,9 +194,7 @@ class IntegrateKitsuNote(pyblish.api.InstancePlugin):
             self.log.debug("Comment is `{}`".format(publish_comment))
 
         # Add comment to kitsu task
-        self.log.debug(
-            "Add new note in tasks id {}".format(kitsu_task["id"])
-        )
+        self.log.debug("Add new note in tasks id {}".format(kitsu_task["id"]))
         kitsu_comment = gazu.task.add_comment(
             kitsu_task, note_status, comment=publish_comment
         )
