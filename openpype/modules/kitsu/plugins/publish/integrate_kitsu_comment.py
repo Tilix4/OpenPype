@@ -77,8 +77,8 @@ class IntegrateKitsuComment(pyblish.api.InstancePlugin):
             != kitsu_comment["task_status"]["short_name"]
         ):
             self.log.info(
-                "Kitsu comment status is different from the one in the instance, "
-                "updating comment status..."
+                "Kitsu comment status is different from the one in the "
+                "instance, updating comment status..."
             )
             if kitsu_status := gazu.task.get_task_status_by_short_name(
                 note_status_shortname
