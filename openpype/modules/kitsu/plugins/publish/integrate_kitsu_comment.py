@@ -83,7 +83,7 @@ class IntegrateKitsuComment(pyblish.api.InstancePlugin):
             if kitsu_status := gazu.task.get_task_status_by_short_name(
                 note_status_shortname
             ):
-                kitsu_comment["task_status"] = kitsu_status
+                kitsu_comment["task_status_id"] = kitsu_status["id"]
                 self.log.info(f"Note Kitsu status: {kitsu_status}")
             else:
                 self.log.info(

@@ -44,9 +44,9 @@ class IntegrateKitsuNote(pyblish.api.InstancePlugin):
             != self.note_status_shortname
         ):
             self.note_status_shortname = kitsu_note["note_status_shortname"]
-            settings_from_context["note_status_shortname"] = (
-                self.note_status_shortname
-            )
+            settings_from_context[
+                "note_status_shortname"
+            ] = self.note_status_shortname
 
         if (
             kitsu_note.get("status_change_conditions")
@@ -55,9 +55,9 @@ class IntegrateKitsuNote(pyblish.api.InstancePlugin):
             self.status_change_conditions = kitsu_note[
                 "status_change_conditions"
             ]
-            settings_from_context["status_change_conditions"] = (
-                self.status_change_conditions
-            )
+            settings_from_context[
+                "status_change_conditions"
+            ] = self.status_change_conditions
 
         if settings_from_context:
             self.log.info(
@@ -105,10 +105,19 @@ class IntegrateKitsuNote(pyblish.api.InstancePlugin):
         if self.skip_instance(instance, kitsu_task):
             return
 
+        # Add comment to kitsu task
+        self.log.debug("Add new note in tasks id {}".format(kitsu_task["id"]))
+        kitsu_comment = gazu.task.add_comment(
+            kitsu_task,
+            kitsu_task["task_status"],  # NOTE Status changed in KitsuComment
+        )
+
+        instance.data["kitsu_comment"] = kitsu_comment
+        self._processed_tasks.append(kitsu_task)
+
         # Get note status, by default uses the task status for the note
         # if it is not specified in the configuration
         shortname = kitsu_task["task_status"]["short_name"].upper()
-        note_status = kitsu_task["task_status_id"]
 
         # Check if any status condition is not met
         allow_status_change = True
@@ -136,30 +145,6 @@ class IntegrateKitsuNote(pyblish.api.InstancePlugin):
                     break
 
         # Set note status
+        # NOTE actually changed in KitsuComment
         if self.set_status_note and allow_status_change:
-            kitsu_status = gazu.task.get_task_status_by_short_name(
-                self.note_status_shortname
-            )
-            if kitsu_status:
-                note_status = kitsu_status
-                self.log.info("Note Kitsu status: {}".format(note_status))
-            else:
-                self.log.info(
-                    f"Cannot find {self.note_status_shortname} status. "
-                    f"The status will not be changed!"
-                )
-        else:
-            self.log.info(
-                "Don't update status note. "
-                f"{self.set_status_note = }, {allow_status_change = }"
-            )
-
-        # Add comment to kitsu task
-        self.log.debug("Add new note in tasks id {}".format(kitsu_task["id"]))
-        kitsu_comment = gazu.task.add_comment(
-            kitsu_task,
-            note_status,
-        )
-
-        instance.data["kitsu_comment"] = kitsu_comment
-        self._processed_tasks.append(kitsu_task)
+            instance.data["note_status_shortname"] = self.note_status_shortname
