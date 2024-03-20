@@ -9,7 +9,7 @@ from openpype.modules.kitsu.plugins.publish import integrate_kitsu_review
 class IntegrateKitsuComment(pyblish.api.InstancePlugin):
     """Integrate Kitsu Comment"""
 
-    order = integrate_kitsu_review.IntegrateKitsuReview.order
+    order = integrate_kitsu_review.IntegrateKitsuReview.order - 0.000001
     label = "Kitsu Comment"
     families = integrate_kitsu_review.IntegrateKitsuReview.families
 
